@@ -132,7 +132,7 @@ void AP_ExternalAHRS::init(void)
 #endif
 
 
-#if AP_EXTERNAL_AHRS_INERTIALLABS_ENABLED
+#if AP_EXTERNAL_AHRS_ANELLOX3_ENABLED
     case DevType::AnelloX3:
         backend = NEW_NOTHROW AP_ExternalAHRS_AnelloX3(this, state);
         return;
