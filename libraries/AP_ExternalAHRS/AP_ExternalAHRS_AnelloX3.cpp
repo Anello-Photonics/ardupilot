@@ -87,6 +87,7 @@ void AP_ExternalAHRS_AnelloX3::build_packet()
 // Posts data from an imu packet to `state` and `handle_external` methods
 void AP_ExternalAHRS_AnelloX3::post_imu() const
 {
+    // dummy function for now
 }
 
 int8_t AP_ExternalAHRS_AnelloX3::get_port(void) const
@@ -105,13 +106,14 @@ const char* AP_ExternalAHRS_AnelloX3::get_name() const
 
 bool AP_ExternalAHRS_AnelloX3::healthy(void) const
 {
-    uint32_t now = AP_HAL::millis();
-    return (now - last_imu_pkt < 40 );
+    // dummy function for now
+    return true;
 }
 
 bool AP_ExternalAHRS_AnelloX3::initialised(void) const
 {
-    return last_imu_pkt != 0 && last_gps_pkt != 0 && last_filter_pkt != 0;
+    // dummy function for now
+    return true;
 }
 
 bool AP_ExternalAHRS_AnelloX3::pre_arm_check(char *failure_msg, uint8_t failure_msg_len) const
@@ -121,6 +123,26 @@ bool AP_ExternalAHRS_AnelloX3::pre_arm_check(char *failure_msg, uint8_t failure_
         return false;
     }
     return true;
+}
+
+void AP_ExternalAHRS_AnelloX3::get_filter_status(nav_filter_status &status) const
+{
+    // dummy function for now
+}
+
+// get variances
+bool AP_ExternalAHRS_AnelloX3::get_variances(float &velVar, float &posVar, float &hgtVar, Vector3f &magVar, float &tasVar) const
+{
+    // dummy function for now
+    return false;
+}
+
+
+// get variances
+uint8_t AP_ExternalAHRS_AnelloX3::num_gps_sensors(void) const
+{
+    // dummy function for now
+    return 0;
 }
 
 #endif // AP_EXTERNAL_AHRS_MICROSTRAIN5_ENABLED 

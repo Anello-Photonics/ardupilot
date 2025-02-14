@@ -36,17 +36,17 @@ public:
     void update() override {
         build_packet();
     };
-
-private:
-    // UART port config
-    uint32_t baudrate;
-    int8_t port_num;
-    bool port_open = false;
+    
+    // Get model/type name
+    const char* get_name() const override;
 
     // accessors for AP_AHRS
     bool healthy(void) const override;
     bool initialised(void) const override;
     bool pre_arm_check(char *failure_msg, uint8_t failure_msg_len) const override;
+    void get_filter_status(nav_filter_status &status) const override;
+    bool get_variances(float &velVar, float &posVar, float &hgtVar, Vector3f &magVar, float &tasVar) const override;
+    virtual uint8_t num_gps_sensors(void) const override;
 
     void build_packet();
 
@@ -54,6 +54,15 @@ private:
 
     void update_thread();
 
+
+private:
+    // UART port config
+    uint32_t baudrate;
+    int8_t port_num;
+    bool port_open = false;
+    
     AP_HAL::UARTDriver *uart;
     HAL_Semaphore sem;
-}
+};
+
+#endif  // AP_EXTERNAL_AHRS_ANELLOX3_ENABLED
