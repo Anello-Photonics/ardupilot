@@ -22,6 +22,14 @@
 
 #if HAL_EXTERNAL_AHRS_ENABLED
 
+#include "AP_ExternalAHRS.h"
+#include "AP_ExternalAHRS_backend.h"
+#include "AP_ExternalAHRS_VectorNav.h"
+#include "AP_ExternalAHRS_MicroStrain5.h"
+#include "AP_ExternalAHRS_MicroStrain7.h"
+#include "AP_ExternalAHRS_InertialLabs.h"
+#include "AP_ExternalAHRS_AnelloX3.h"
+
 #include <GCS_MAVLink/GCS.h>
 
 extern const AP_HAL::HAL &hal;
@@ -50,7 +58,7 @@ const AP_Param::GroupInfo AP_ExternalAHRS::var_info[] = {
     // @Param: _TYPE
     // @DisplayName: AHRS type
     // @Description: Type of AHRS device
-    // @Values: 0:None,1:VectorNav,2:LORD
+    // @Values: 0:None,1:VectorNav,2:MicroStrain5,5:InertialLabs,7:MicroStrain7,11:AnelloX3
     // @User: Standard
     AP_GROUPINFO_FLAGS("_TYPE", 1, AP_ExternalAHRS, devtype, HAL_EXTERNAL_AHRS_DEFAULT, AP_PARAM_FLAG_ENABLE),
 
@@ -91,14 +99,35 @@ void AP_ExternalAHRS::init(void)
         // nothing to do
         break;
     case DevType::VecNav:
-        backend = new AP_ExternalAHRS_VectorNav(this, state);
-        break;
-    case DevType::LORD:
-        backend = new AP_ExternalAHRS_LORD(this, state);
-        break;
-    default:
-        GCS_SEND_TEXT(MAV_SEVERITY_INFO, "Unsupported ExternalAHRS type %u", unsigned(devtype));
-        break;
+        backend = NEW_NOTHROW AP_ExternalAHRS_VectorNav(this, state);
+        return;
+#endif
+
+#if AP_EXTERNAL_AHRS_MICROSTRAIN5_ENABLED
+    case DevType::MicroStrain5:
+        backend = NEW_NOTHROW AP_ExternalAHRS_MicroStrain5(this, state);
+        return;
+#endif
+
+#if AP_EXTERNAL_AHRS_MICROSTRAIN7_ENABLED
+    case DevType::MicroStrain7:
+        backend = NEW_NOTHROW AP_ExternalAHRS_MicroStrain7(this, state);
+        return;
+#endif
+
+#if AP_EXTERNAL_AHRS_INERTIALLABS_ENABLED
+    case DevType::InertialLabs:
+        backend = NEW_NOTHROW AP_ExternalAHRS_InertialLabs(this, state);
+        return;
+#endif
+
+
+#if AP_EXTERNAL_AHRS_ANELLOX3_ENABLED
+    case DevType::AnelloX3:
+        backend = NEW_NOTHROW AP_ExternalAHRS_AnelloX3(this, state);
+        return;
+#endif
+
     }
 }
 
