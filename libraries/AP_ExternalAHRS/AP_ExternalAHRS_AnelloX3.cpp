@@ -249,10 +249,80 @@ void AP_ExternalAHRS_AnelloX3::handle_imu(const AnelloX3_Packet& packet)
             bin_payload.sync_time |= packet.payload[i] << (i - 8);
         }
         if (i >= 16 && i < 18) {
-            // sync time section, 2 bytes
+            // ax1 section, 2 bytes
             bin_payload.ax1 |= packet.payload[i] << (i - 16);
+        }
+        if (i >= 18 && i < 20) {
+            // ay1 section, 2 bytes
+            bin_payload.ay1 |= packet.payload[i] << (i - 18);
+        }
+        if (i >= 20 && i < 22) {
+            // az1 section, 2 bytes
+            bin_payload.az1 |= packet.payload[i] << (i - 20);
+        }
+        if (i >= 22 && i < 24) {
+            // wx1 section, 2 bytes
+            bin_payload.wx1 |= packet.payload[i] << (i - 22);
+        }
+        if (i >= 24 && i < 26) {
+            // wy1 section, 2 bytes
+            bin_payload.wy1 |= packet.payload[i] << (i - 24);
+        }
+        if (i >= 26 && i < 28) {
+            // wz1 section, 2 bytes
+            bin_payload.wz1 |= packet.payload[i] << (i - 26);
+        }
+        if (i >= 28 && i < 32) {
+            // og_wx section, 4 bytes
+            bin_payload.og_wx |= packet.payload[i] << (i - 28);
+        }
+        if (i >= 32 && i < 36) {
+            // og_wy section, 4 bytes
+            bin_payload.og_wy |= packet.payload[i] << (i - 32);
+        }
+        if (i >= 36 && i < 40) {
+            // og_wz section, 4 bytes
+            bin_payload.og_wz |= packet.payload[i] << (i - 36);
+        }
+        if (i >= 40 && i < 42) {
+            // mag_x section, 2 bytes
+            bin_payload.mag_x |= packet.payload[i] << (i - 40);
+        }
+        if (i >= 42 && i < 44) {
+            // mag_y section, 2 bytes
+            bin_payload.mag_y |= packet.payload[i] << (i - 42);
+        }
+        if (i >= 44 && i < 46) {
+            // mag_z section, 2 bytes
+            bin_payload.mag_z |= packet.payload[i] << (i - 44);
+        }
+        if (i >= 46 && i < 48) {
+            // temp section, 2 bytes
+            bin_payload.temp |= packet.payload[i] << (i - 46);
+        }
+        if (i >= 48 && i < 50) {
+            // mems_ranges section, 2 bytes
+            bin_payload.mems_ranges |= packet.payload[i] << (i - 48);
+        }
+        if (i >= 50 && i < 52) {
+            // fog_range section, 2 bytes
+            bin_payload.fog_range |= packet.payload[i] << (i - 50);
+        }
+        if (i >= 52 && i < 53) {
+            // fusion_status_x section, 1 byte (?)
+            bin_payload.fusion_status_x |= packet.payload[i] << (i - 52);
+        }
+        if (i >= 53 && i < 54) {
+            // fusion_status_y section, 1 byte (?)
+            bin_payload.fusion_status_y |= packet.payload[i] << (i - 53);
+        }
+        if (i >= 54 && i < 55) {
+            // fusion_status_z section, 1 byte (?)
+            bin_payload.fusion_status_z |= packet.payload[i] << (i - 54);
         }
     }
     
 }
+
+
 #endif // AP_EXTERNAL_AHRS_MICROSTRAIN5_ENABLED 
