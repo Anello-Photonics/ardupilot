@@ -59,6 +59,7 @@ void AP_ExternalAHRS_AnelloX3::update_thread(void)
 
     while (true) {
         build_packet();
+        GCS_SEND_TEXT(MAV_SEVERITY_INFO, "update_thread run");
         hal.scheduler->delay_microseconds(100);
     }
 }
