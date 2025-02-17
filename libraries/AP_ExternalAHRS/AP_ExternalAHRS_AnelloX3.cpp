@@ -80,9 +80,65 @@ void AP_ExternalAHRS_AnelloX3::build_packet()
         if (!uart->read(b)) {
             break;
         }
+        DescriptorSet descriptor;
+        if (handle_byte(b, descriptor)) {
+            switch (descriptor) {
+            case DescriptorSet::IMUData:
+                post_imu();
+                break;
+        }
+    }
     }
 }
 
+bool AP_ExternalAHRS_AnelloX3::handle_byte(const uint8_t b, DescriptorSet& descriptor)
+{
+    switch (message_in.state) {
+        case ParseState::WaitingFor_SyncOne:
+            if (b == SYNC_ONE) {
+                message_in.packet.header[0] = b;
+                message_in.state = ParseState::WaitingFor_SyncTwo;
+            }
+            break;
+        case ParseState::WaitingFor_SyncTwo:
+            if (b == SYNC_TWO) {
+                message_in.packet.header[1] = b;
+                message_in.state = ParseState::WaitingFor_Descriptor;
+            } else {
+                message_in.state = ParseState::WaitingFor_SyncOne;
+            }
+            break;
+        case ParseState::WaitingFor_Descriptor:
+            message_in.packet.descriptor_set(b);
+            message_in.state = ParseState::WaitingFor_PayloadLength;
+            break;
+        case ParseState::WaitingFor_PayloadLength:
+            message_in.packet.payload_length(b);
+            message_in.state = ParseState::WaitingFor_Data;
+            message_in.index = 0;
+            break;
+        case ParseState::WaitingFor_Data:
+            message_in.packet.payload[message_in.index++] = b;
+            if (message_in.index >= message_in.packet.payload_length()) {
+                message_in.state = ParseState::WaitingFor_Checksum;
+                message_in.index = 0;
+            }
+            break;
+        case ParseState::WaitingFor_Checksum:
+            message_in.packet.checksum[message_in.index++] = b;
+            if (message_in.index >= 2) {
+                message_in.state = ParseState::WaitingFor_SyncOne;
+                message_in.index = 0;
+
+                if (valid_packet(message_in.packet)) {
+                    descriptor = handle_packet(message_in.packet);
+                    return true;
+                }
+            }
+            break;
+        }
+    return false;
+}
 
 
 // Posts data from an imu packet to `state` and `handle_external` methods
@@ -146,4 +202,57 @@ uint8_t AP_ExternalAHRS_AnelloX3::num_gps_sensors(void) const
     return 0;
 }
 
+bool AP_ExternalAHRS_AnelloX3::valid_packet(const AnelloX3_Packet & packet)
+{
+    uint8_t checksum_one = 0;
+    uint8_t checksum_two = 0;
+
+    for (int i = 0; i < 4; i++) {
+        checksum_one += packet.header[i];
+        checksum_two += checksum_one;
+    }
+
+    for (int i = 0; i < packet.payload_length(); i++) {
+        checksum_one += packet.payload[i];
+        checksum_two += checksum_one;
+    }
+
+    return packet.checksum[0] == checksum_one && packet.checksum[1] == checksum_two;
+}
+
+AP_ExternalAHRS_AnelloX3::DescriptorSet AP_ExternalAHRS_AnelloX3::handle_packet(const AnelloX3_Packet& packet)
+{
+    const DescriptorSet descriptor = packet.descriptor_set();
+    switch (descriptor) {
+    case DescriptorSet::IMUData:
+        handle_imu(packet);
+        break;
+    }
+    return descriptor;
+}
+
+void AP_ExternalAHRS_AnelloX3::handle_imu(const AnelloX3_Packet& packet)
+{
+    // unpacking function for the X3 IMU messages
+
+    AnelloX3_BinaryPayload bin_payload;
+    // keep track of last recv packet
+    // last_imu_pkt = AP_HAL::millis(); --> include later
+
+    for (int i=0; i < packet.payload_length(); i++) {
+        if (i >= 0 && i < 8) {
+            // mcu time section, 8 bytes
+            bin_payload.mcu_time |= packet.payload[i] << i;
+        }
+        if (i >= 8 && i < 16) {
+            // sync time section, 8 bytes
+            bin_payload.sync_time |= packet.payload[i] << (i - 8);
+        }
+        if (i >= 16 && i < 18) {
+            // sync time section, 2 bytes
+            bin_payload.ax1 |= packet.payload[i] << (i - 16);
+        }
+    }
+    
+}
 #endif // AP_EXTERNAL_AHRS_MICROSTRAIN5_ENABLED 

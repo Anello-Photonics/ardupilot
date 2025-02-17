@@ -23,11 +23,15 @@
 #include "AP_ExternalAHRS_backend.h"
 #include <AP_HAL/AP_HAL.h>
 
-
 class AP_ExternalAHRS_AnelloX3: public AP_ExternalAHRS_backend
 {
 public:
     AP_ExternalAHRS_AnelloX3(AP_ExternalAHRS *frontend, AP_ExternalAHRS::state_t &state);
+
+    enum class DescriptorSet {
+        IMUData = 253
+    };
+
 
     // get serial port number, -1 for not enabled
     int8_t get_port(void) const override;
@@ -63,6 +67,91 @@ private:
     
     AP_HAL::UARTDriver *uart;
     HAL_Semaphore sem;
+
+    const uint8_t SYNC_ONE = 0xC5;
+    const uint8_t SYNC_TWO = 0x50;
+
+    enum class ParseState {
+        WaitingFor_SyncOne, // 0xC5
+        WaitingFor_SyncTwo, // 0x50
+        WaitingFor_Descriptor, // 253
+        WaitingFor_PayloadLength, // up to 255
+        WaitingFor_Data,
+        WaitingFor_Checksum
+    };
+
+
+    struct AnelloX3_BinaryPayload {
+        uint64_t mcu_time; // ns -- time since power on
+        uint64_t sync_time; // ns -- time of external sync pulse
+        int16_t ax1; // g = value * (range * 0.0000305) -- scaled sensor accel
+        int16_t ay1; 
+        int16_t az1;
+        int16_t wx1; // dps = value * (range * 0.0000305) -- scaled sensor rate
+        int16_t wy1;
+        int16_t wz1;
+        int32_t og_wx; // dps * 1e7 -- scaled sensor rate for FOG 
+        int32_t og_wy;
+        int32_t og_wz;
+        int16_t mag_x; // g * 4096 -- scaled magnetometer data
+        int16_t mag_y;
+        int16_t mag_z;
+        int16_t temp; // degC * 100 -- scaled temperature value
+        uint16_t mems_ranges; // first 5 bits accel, next 11 bits gyro
+        uint16_t fog_range; // fog range in dps
+        // bitfield flag values
+        // BIT 0 Gyro discrepancy
+        // BIT 1 Temperature uncontrolled
+        // BIT 2 Over current error
+        // BIT 3 SiPhOG supply voltage bad
+        uint8_t fusion_status_x;
+        uint8_t fusion_status_y;
+        uint8_t fusion_status_z;
+    };
+
+
+    struct AnelloX3_Packet {
+        uint8_t header[4]; // incl 2-byte preamble, 1-byte message type, and 1-byte message length
+        uint8_t payload[255];
+        uint8_t checksum[2]; // calculated not incl preamble nor checksum bytes
+
+        // Gets the payload length
+        uint8_t payload_length() const WARN_IF_UNUSED {
+            return header[3];
+        }
+
+        // Sets the payload length
+        void payload_length(const uint8_t len) {
+            header[3] = len;
+        }
+
+        // Gets the descriptor set
+        DescriptorSet descriptor_set() const WARN_IF_UNUSED {
+            return DescriptorSet(header[2]);
+        }
+
+        // Sets the descriptor set (without validation)
+        void descriptor_set(const uint8_t descriptor_set) {
+            header[2] = descriptor_set;
+        }
+    };
+
+    struct {
+        AnelloX3_Packet packet;
+        ParseState state;
+        uint8_t index;
+    } message_in;
+
+
+    bool handle_byte(const uint8_t b, DescriptorSet& descriptor);
+
+    // Returns true if the fletcher checksum for the packet is valid, else false.
+    static bool valid_packet(const AnelloX3_Packet &packet);
+    DescriptorSet handle_packet(const AnelloX3_Packet& packet);
+    // Collects data from an imu packet into `imu_data`
+    void handle_imu(const AnelloX3_Packet &packet);
+        
+
 };
 
 #endif  // AP_EXTERNAL_AHRS_ANELLOX3_ENABLED
