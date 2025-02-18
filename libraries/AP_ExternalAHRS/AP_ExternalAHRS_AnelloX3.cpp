@@ -18,7 +18,7 @@
 
 #include "AP_ExternalAHRS_config.h"
 
-#if AP_EXTERNAL_AHRS_MICROSTRAIN5_ENABLED
+#if AP_EXTERNAL_AHRS_ANELLOX3_ENABLED
 
 #include "AP_ExternalAHRS_AnelloX3.h"
 #include <AP_InertialSensor/AP_InertialSensor.h>
@@ -131,7 +131,6 @@ bool AP_ExternalAHRS_AnelloX3::handle_byte(const uint8_t b, DescriptorSet& descr
 
                 if (valid_packet(message_in.packet)) {
                     descriptor = handle_packet(message_in.packet);
-                    GCS_SEND_TEXT(MAV_SEVERITY_INFO, "checksum is good");
                     return true;
                 }
             }
