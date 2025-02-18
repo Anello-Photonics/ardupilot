@@ -150,8 +150,25 @@ private:
     DescriptorSet handle_packet(const AnelloX3_Packet& packet);
     // Collects data from an imu packet into `imu_data`
     void handle_imu(const AnelloX3_Packet &packet);
-        
+    
+    uint32_t last_imu_pkt;
 
+    struct {
+        Vector3f mems_accel;
+        Vector3f mems_gyro;
+        Vector3f fog_gyro;
+        Vector3f mag;
+        float temp;
+        float mems_acc_range;
+        float mems_gyro_range;
+        float fog_gyro_range;
+        uint8_t fusion_status_x;
+        uint8_t fusion_status_y;
+        uint8_t fusion_status_z;
+    } imu_data;
+
+    //  converts raw binary data to actual values
+    void convert_imu_data(const AnelloX3_BinaryPayload& bin_payload);
 };
 
 #endif  // AP_EXTERNAL_AHRS_ANELLOX3_ENABLED

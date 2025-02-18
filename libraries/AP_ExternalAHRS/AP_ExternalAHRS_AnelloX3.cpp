@@ -144,7 +144,26 @@ bool AP_ExternalAHRS_AnelloX3::handle_byte(const uint8_t b, DescriptorSet& descr
 // Posts data from an imu packet to `state` and `handle_external` methods
 void AP_ExternalAHRS_AnelloX3::post_imu() const
 {
-    // dummy function for now
+    // note that we will have to find a way to post as two separate INSs
+    {
+        WITH_SEMAPHORE(state.sem);
+        state.accel = imu_data.mems_accel;
+        state.gyro = imu_data.mems_gyro;
+
+        state.have_quaternion = false;
+    }
+
+    {
+        AP_ExternalAHRS::ins_data_message_t ins {
+            accel: imu_data.mems_accel,
+            gyro: imu_data.mems_gyro,
+            temperature: -300 // update this later after confirming these post
+        };
+        AP::ins().handle_external(ins);
+    }
+
+    // include mag data once we have shown that we can transmit imu data
+
 }
 
 int8_t AP_ExternalAHRS_AnelloX3::get_port(void) const
@@ -163,14 +182,13 @@ const char* AP_ExternalAHRS_AnelloX3::get_name() const
 
 bool AP_ExternalAHRS_AnelloX3::healthy(void) const
 {
-    // dummy function for now
-    return true;
+    uint32_t now = AP_HAL::millis();
+    return (now - last_imu_pkt < 40);
 }
 
 bool AP_ExternalAHRS_AnelloX3::initialised(void) const
 {
-    // dummy function for now
-    return true;
+    return last_imu_pkt != 0;
 }
 
 bool AP_ExternalAHRS_AnelloX3::pre_arm_check(char *failure_msg, uint8_t failure_msg_len) const
@@ -235,9 +253,11 @@ void AP_ExternalAHRS_AnelloX3::handle_imu(const AnelloX3_Packet& packet)
 {
     // unpacking function for the X3 IMU messages
 
+    // storage for parsing out raw data payload
     AnelloX3_BinaryPayload bin_payload;
+
     // keep track of last recv packet
-    // last_imu_pkt = AP_HAL::millis(); --> include later
+    last_imu_pkt = AP_HAL::millis(); 
 
     for (int i=0; i < packet.payload_length(); i++) {
         if (i >= 0 && i < 8) {
@@ -321,8 +341,51 @@ void AP_ExternalAHRS_AnelloX3::handle_imu(const AnelloX3_Packet& packet)
             bin_payload.fusion_status_z |= packet.payload[i] << (i - 54);
         }
     }
+
+    // convert the binary data to actual values
+   convert_imu_data(bin_payload);
     
 }
 
+// convert the binary data to actual values
+void AP_ExternalAHRS_AnelloX3::convert_imu_data(const AnelloX3_BinaryPayload& bin_payload)
+{
+
+    // mems ranges: gggg gggg ggga aaaa where 'g' is a gyro bit and 'a' is an acc bit
+
+    // parse out ranges
+    imu_data.mems_acc_range = bin_payload.mems_ranges & 0x1F; // acc range mask
+    imu_data.mems_gyro_range = (bin_payload.mems_ranges >> 5); // gyro range shift
+    imu_data.fog_gyro_range = bin_payload.fog_range;
+
+    // calculate mems acc data
+    imu_data.mems_accel.x = bin_payload.ax1 * imu_data.mems_acc_range * 3.05e-5;
+    imu_data.mems_accel.y = bin_payload.ay1 * imu_data.mems_acc_range * 3.05e-5;
+    imu_data.mems_accel.z = bin_payload.az1 * imu_data.mems_acc_range * 3.05e-5;
+
+    // calculate mems gyro data
+    imu_data.mems_gyro.x = bin_payload.wx1 * imu_data.mems_gyro_range * 3.5e-5;
+    imu_data.mems_gyro.y = bin_payload.wy1 * imu_data.mems_gyro_range * 3.5e-5;
+    imu_data.mems_gyro.z = bin_payload.wz1 * imu_data.mems_gyro_range * 3.5e-5;
+
+    // calculate fog gyro data
+    imu_data.fog_gyro.x = bin_payload.og_wx * 1e-7;
+    imu_data.fog_gyro.y = bin_payload.og_wy * 1e-7;
+    imu_data.fog_gyro.z = bin_payload.og_wz * 1e-7;
+
+    // calculate mag data
+    imu_data.mag.x = bin_payload.mag_x / 4096;
+    imu_data.mag.y = bin_payload.mag_y / 4096;
+    imu_data.mag.z = bin_payload.mag_z / 4096;
+
+    // calculate temperature
+    imu_data.temp = bin_payload.temp / 100;
+
+    // transfer statuses
+    imu_data.fusion_status_x = bin_payload.fusion_status_x;
+    imu_data.fusion_status_y = bin_payload.fusion_status_y;
+    imu_data.fusion_status_z = bin_payload.fusion_status_z;
+
+}
 
 #endif // AP_EXTERNAL_AHRS_MICROSTRAIN5_ENABLED 
