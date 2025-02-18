@@ -59,7 +59,6 @@ void AP_ExternalAHRS_AnelloX3::update_thread(void)
 
     while (true) {
         build_packet();
-        GCS_SEND_TEXT(MAV_SEVERITY_INFO, "update_thread run");
         hal.scheduler->delay_microseconds(100);
     }
 }
@@ -96,12 +95,14 @@ bool AP_ExternalAHRS_AnelloX3::handle_byte(const uint8_t b, DescriptorSet& descr
     switch (message_in.state) {
         case ParseState::WaitingFor_SyncOne:
             if (b == SYNC_ONE) {
+                GCS_SEND_TEXT(MAV_SEVERITY_INFO, "got first sync");
                 message_in.packet.header[0] = b;
                 message_in.state = ParseState::WaitingFor_SyncTwo;
             }
             break;
         case ParseState::WaitingFor_SyncTwo:
             if (b == SYNC_TWO) {
+                GCS_SEND_TEXT(MAV_SEVERITY_INFO, "got second sync");
                 message_in.packet.header[1] = b;
                 message_in.state = ParseState::WaitingFor_Descriptor;
             } else {
