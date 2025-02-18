@@ -95,14 +95,12 @@ bool AP_ExternalAHRS_AnelloX3::handle_byte(const uint8_t b, DescriptorSet& descr
     switch (message_in.state) {
         case ParseState::WaitingFor_SyncOne:
             if (b == SYNC_ONE) {
-                GCS_SEND_TEXT(MAV_SEVERITY_INFO, "got first sync");
                 message_in.packet.header[0] = b;
                 message_in.state = ParseState::WaitingFor_SyncTwo;
             }
             break;
         case ParseState::WaitingFor_SyncTwo:
             if (b == SYNC_TWO) {
-                GCS_SEND_TEXT(MAV_SEVERITY_INFO, "got second sync");
                 message_in.packet.header[1] = b;
                 message_in.state = ParseState::WaitingFor_Descriptor;
             } else {
@@ -133,6 +131,7 @@ bool AP_ExternalAHRS_AnelloX3::handle_byte(const uint8_t b, DescriptorSet& descr
 
                 if (valid_packet(message_in.packet)) {
                     descriptor = handle_packet(message_in.packet);
+                    GCS_SEND_TEXT(MAV_SEVERITY_INFO, "checksum is good");
                     return true;
                 }
             }
@@ -208,7 +207,7 @@ bool AP_ExternalAHRS_AnelloX3::valid_packet(const AnelloX3_Packet & packet)
     uint8_t checksum_one = 0;
     uint8_t checksum_two = 0;
 
-    for (int i = 0; i < 4; i++) {
+    for (int i = 2; i < 4; i++) {
         checksum_one += packet.header[i];
         checksum_two += checksum_one;
     }
