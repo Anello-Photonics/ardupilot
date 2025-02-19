@@ -21,7 +21,9 @@
 #if AP_EXTERNAL_AHRS_ANELLOX3_ENABLED
 
 #include "AP_ExternalAHRS_AnelloX3.h"
+#include "AP_Compass/AP_Compass_config.h"
 #include <AP_InertialSensor/AP_InertialSensor.h>
+#include <AP_Compass/AP_Compass.h>
 #include <GCS_MAVLink/GCS.h>
 #include <AP_Logger/AP_Logger.h>
 #include <AP_BoardConfig/AP_BoardConfig.h>
@@ -167,7 +169,14 @@ void AP_ExternalAHRS_AnelloX3::post_imu() const
         AP::ins().handle_external(ins);
     }
 
-    // include mag data once we have shown that we can transmit imu data
+#if AP_COMPASS_EXTERNALAHRS_ENABLED
+    {
+        AP_ExternalAHRS::mag_data_message_t mag {
+            field: imu_data.mag
+        };
+        AP::compass().handle_external(mag);
+    }
+#endif
 
 }
 
