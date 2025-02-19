@@ -82,31 +82,31 @@ private:
 
 
     struct AnelloX3_BinaryPayload {
-        uint64_t mcu_time; // ns -- time since power on
-        uint64_t sync_time; // ns -- time of external sync pulse
-        int16_t ax1; // g = value * (range * 0.0000305) -- scaled sensor accel
-        int16_t ay1; 
-        int16_t az1;
-        int16_t wx1; // dps = value * (range * 0.0000305) -- scaled sensor rate
-        int16_t wy1;
-        int16_t wz1;
-        int32_t og_wx; // dps * 1e7 -- scaled sensor rate for FOG 
-        int32_t og_wy;
-        int32_t og_wz;
-        int16_t mag_x; // g * 4096 -- scaled magnetometer data
-        int16_t mag_y;
-        int16_t mag_z;
-        int16_t temp; // degC * 100 -- scaled temperature value
-        uint16_t mems_ranges; // first 5 bits accel, next 11 bits gyro
-        uint16_t fog_range; // fog range in dps
+        uint64_t mcu_time = 0; // ns -- time since power on
+        uint64_t sync_time= 0; // ns -- time of external sync pulse
+        int16_t ax1= 0; // g = value * (range * 0.0000305) -- scaled sensor accel
+        int16_t ay1= 0; 
+        int16_t az1= 0;
+        int16_t wx1= 0; // dps = value * (range * 0.0000305) -- scaled sensor rate
+        int16_t wy1= 0;
+        int16_t wz1= 0;
+        int32_t og_wx= 0; // dps * 1e7 -- scaled sensor rate for FOG 
+        int32_t og_wy= 0;
+        int32_t og_wz= 0;
+        int16_t mag_x= 0; // g * 4096 -- scaled magnetometer data
+        int16_t mag_y= 0;
+        int16_t mag_z= 0;
+        int16_t temp= 0; // degC * 100 -- scaled temperature value
+        uint16_t mems_ranges= 0; // first 5 bits accel, next 11 bits gyro
+        uint16_t fog_range= 0; // fog range in dps
         // bitfield flag values
         // BIT 0 Gyro discrepancy
         // BIT 1 Temperature uncontrolled
         // BIT 2 Over current error
         // BIT 3 SiPhOG supply voltage bad
-        uint8_t fusion_status_x;
-        uint8_t fusion_status_y;
-        uint8_t fusion_status_z;
+        uint8_t fusion_status_x= 0;
+        uint8_t fusion_status_y= 0;
+        uint8_t fusion_status_z= 0;
     };
 
 

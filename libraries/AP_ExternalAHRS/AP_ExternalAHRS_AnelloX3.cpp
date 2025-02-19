@@ -26,6 +26,9 @@
 #include <AP_Logger/AP_Logger.h>
 #include <AP_BoardConfig/AP_BoardConfig.h>
 #include <AP_SerialManager/AP_SerialManager.h>
+#include <AP_Math/AP_Math.h>
+#include <inttypes.h>
+
 
 extern const AP_HAL::HAL &hal;
 
@@ -41,6 +44,9 @@ AP_ExternalAHRS_AnelloX3::AP_ExternalAHRS_AnelloX3(AP_ExternalAHRS *_frontend,
         GCS_SEND_TEXT(MAV_SEVERITY_ERROR, "Anello X3 ExternalAHRS no UART");
         return;
     }
+
+    // hold of on mag inclusion until we have shown imu works
+    set_default_sensors( uint16_t(AP_ExternalAHRS::AvailableSensor::IMU)); 
 
     if (!hal.scheduler->thread_create(FUNCTOR_BIND_MEMBER(&AP_ExternalAHRS_AnelloX3::update_thread, void), "AHRS", 2048, AP_HAL::Scheduler::PRIORITY_SPI, 0)) {
         AP_BoardConfig::allocation_error("Anello X3 failed to allocate ExternalAHRS update thread");
@@ -255,89 +261,90 @@ void AP_ExternalAHRS_AnelloX3::handle_imu(const AnelloX3_Packet& packet)
     // storage for parsing out raw data payload
     AnelloX3_BinaryPayload bin_payload;
 
+
     // keep track of last recv packet
     last_imu_pkt = AP_HAL::millis(); 
 
     for (int i=0; i < packet.payload_length(); i++) {
         if (i >= 0 && i < 8) {
             // mcu time section, 8 bytes
-            bin_payload.mcu_time |= packet.payload[i] << i;
+            bin_payload.mcu_time |= packet.payload[i] << i*8;
         }
         if (i >= 8 && i < 16) {
             // sync time section, 8 bytes
-            bin_payload.sync_time |= packet.payload[i] << (i - 8);
+            bin_payload.sync_time |= packet.payload[i] << ((i - 8) * 8);
         }
         if (i >= 16 && i < 18) {
             // ax1 section, 2 bytes
-            bin_payload.ax1 |= packet.payload[i] << (i - 16);
+            bin_payload.ax1 |= packet.payload[i] << ((i - 16) * 8);
         }
         if (i >= 18 && i < 20) {
             // ay1 section, 2 bytes
-            bin_payload.ay1 |= packet.payload[i] << (i - 18);
+            bin_payload.ay1 |= packet.payload[i] << ((i - 18) * 8);
         }
         if (i >= 20 && i < 22) {
             // az1 section, 2 bytes
-            bin_payload.az1 |= packet.payload[i] << (i - 20);
+            bin_payload.az1 |= packet.payload[i] << ((i - 20) * 8);
         }
         if (i >= 22 && i < 24) {
             // wx1 section, 2 bytes
-            bin_payload.wx1 |= packet.payload[i] << (i - 22);
+            bin_payload.wx1 |= packet.payload[i] << ((i - 22) * 8);
         }
         if (i >= 24 && i < 26) {
             // wy1 section, 2 bytes
-            bin_payload.wy1 |= packet.payload[i] << (i - 24);
+            bin_payload.wy1 |= packet.payload[i] << ((i - 24) * 8);
         }
         if (i >= 26 && i < 28) {
             // wz1 section, 2 bytes
-            bin_payload.wz1 |= packet.payload[i] << (i - 26);
+            bin_payload.wz1 |= packet.payload[i] << ((i - 26) * 8);
         }
         if (i >= 28 && i < 32) {
             // og_wx section, 4 bytes
-            bin_payload.og_wx |= packet.payload[i] << (i - 28);
+            bin_payload.og_wx |= packet.payload[i] << ((i - 28) * 8);
         }
         if (i >= 32 && i < 36) {
             // og_wy section, 4 bytes
-            bin_payload.og_wy |= packet.payload[i] << (i - 32);
+            bin_payload.og_wy |= packet.payload[i] << ((i - 32) * 8);
         }
         if (i >= 36 && i < 40) {
             // og_wz section, 4 bytes
-            bin_payload.og_wz |= packet.payload[i] << (i - 36);
+            bin_payload.og_wz |= packet.payload[i] << ((i - 36) * 8);
         }
         if (i >= 40 && i < 42) {
             // mag_x section, 2 bytes
-            bin_payload.mag_x |= packet.payload[i] << (i - 40);
+            bin_payload.mag_x |= packet.payload[i] << ((i - 40) * 8);
         }
         if (i >= 42 && i < 44) {
             // mag_y section, 2 bytes
-            bin_payload.mag_y |= packet.payload[i] << (i - 42);
+            bin_payload.mag_y |= packet.payload[i] << ((i - 42) * 8);
         }
         if (i >= 44 && i < 46) {
             // mag_z section, 2 bytes
-            bin_payload.mag_z |= packet.payload[i] << (i - 44);
+            bin_payload.mag_z |= packet.payload[i] << ((i - 44) * 8);
         }
         if (i >= 46 && i < 48) {
             // temp section, 2 bytes
-            bin_payload.temp |= packet.payload[i] << (i - 46);
+            bin_payload.temp |= packet.payload[i] << ((i - 46) * 8);
         }
         if (i >= 48 && i < 50) {
             // mems_ranges section, 2 bytes
-            bin_payload.mems_ranges |= packet.payload[i] << (i - 48);
+            bin_payload.mems_ranges |= packet.payload[i] << ((i - 48) * 8);
         }
         if (i >= 50 && i < 52) {
             // fog_range section, 2 bytes
-            bin_payload.fog_range |= packet.payload[i] << (i - 50);
+            bin_payload.fog_range |= packet.payload[i] << ((i - 50) * 8);
         }
         if (i >= 52 && i < 53) {
             // fusion_status_x section, 1 byte (?)
-            bin_payload.fusion_status_x |= packet.payload[i] << (i - 52);
+            bin_payload.fusion_status_x |= packet.payload[i] << ((i - 52) * 8);
         }
         if (i >= 53 && i < 54) {
             // fusion_status_y section, 1 byte (?)
-            bin_payload.fusion_status_y |= packet.payload[i] << (i - 53);
+            bin_payload.fusion_status_y |= packet.payload[i] << ((i - 53) * 8);
         }
         if (i >= 54 && i < 55) {
             // fusion_status_z section, 1 byte (?)
-            bin_payload.fusion_status_z |= packet.payload[i] << (i - 54);
+            bin_payload.fusion_status_z |= packet.payload[i] << ((i - 54) * 8);
         }
     }
 
@@ -346,6 +353,7 @@ void AP_ExternalAHRS_AnelloX3::handle_imu(const AnelloX3_Packet& packet)
     
 }
 
+
 // convert the binary data to actual values
 void AP_ExternalAHRS_AnelloX3::convert_imu_data(const AnelloX3_BinaryPayload& bin_payload)
 {
@@ -353,8 +361,8 @@ void AP_ExternalAHRS_AnelloX3::convert_imu_data(const AnelloX3_BinaryPayload& bi
     // mems ranges: gggg gggg ggga aaaa where 'g' is a gyro bit and 'a' is an acc bit
 
     // parse out ranges
-    imu_data.mems_acc_range = bin_payload.mems_ranges & 0x1F; // acc range mask
-    imu_data.mems_gyro_range = (bin_payload.mems_ranges >> 5); // gyro range shift
+    imu_data.mems_acc_range = bin_payload.mems_ranges >> 11; // acc range mask
+    imu_data.mems_gyro_range = bin_payload.mems_ranges & 0x07FF; // gyro range shift
     imu_data.fog_gyro_range = bin_payload.fog_range;
 
     // calculate mems acc data
@@ -362,15 +370,19 @@ void AP_ExternalAHRS_AnelloX3::convert_imu_data(const AnelloX3_BinaryPayload& bi
     imu_data.mems_accel.y = bin_payload.ay1 * imu_data.mems_acc_range * 3.05e-5;
     imu_data.mems_accel.z = bin_payload.az1 * imu_data.mems_acc_range * 3.05e-5;
 
+
+    //GCS_SEND_TEXT(MAV_SEVERITY_INFO, "mems_acc bin vals: %x, %x, %x", bin_payload.ax1, bin_payload.ay1, bin_payload.az1);
+    //GCS_SEND_TEXT(MAV_SEVERITY_INFO, "mems_acc vals: %f, %f, %f", imu_data.mems_accel.x, imu_data.mems_accel.y, imu_data.mems_accel.z);
+
     // calculate mems gyro data
-    imu_data.mems_gyro.x = bin_payload.wx1 * imu_data.mems_gyro_range * 3.5e-5;
-    imu_data.mems_gyro.y = bin_payload.wy1 * imu_data.mems_gyro_range * 3.5e-5;
-    imu_data.mems_gyro.z = bin_payload.wz1 * imu_data.mems_gyro_range * 3.5e-5;
+    imu_data.mems_gyro.x = bin_payload.wx1 * imu_data.mems_gyro_range * 3.5e-5 * DEG_TO_RAD;
+    imu_data.mems_gyro.y = bin_payload.wy1 * imu_data.mems_gyro_range * 3.5e-5 * DEG_TO_RAD;
+    imu_data.mems_gyro.z = bin_payload.wz1 * imu_data.mems_gyro_range * 3.5e-5 * DEG_TO_RAD;
 
     // calculate fog gyro data
-    imu_data.fog_gyro.x = bin_payload.og_wx * 1e-7;
-    imu_data.fog_gyro.y = bin_payload.og_wy * 1e-7;
-    imu_data.fog_gyro.z = bin_payload.og_wz * 1e-7;
+    imu_data.fog_gyro.x = bin_payload.og_wx * 1e-7 * DEG_TO_RAD;
+    imu_data.fog_gyro.y = bin_payload.og_wy * 1e-7 * DEG_TO_RAD;
+    imu_data.fog_gyro.z = bin_payload.og_wz * 1e-7 * DEG_TO_RAD;
 
     // calculate mag data
     imu_data.mag.x = bin_payload.mag_x / 4096;
