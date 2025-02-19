@@ -357,7 +357,6 @@ void AP_ExternalAHRS_AnelloX3::handle_imu(const AnelloX3_Packet& packet)
 // convert the binary data to actual values
 void AP_ExternalAHRS_AnelloX3::convert_imu_data(const AnelloX3_BinaryPayload& bin_payload)
 {
-
     // mems ranges: gggg gggg ggga aaaa where 'g' is a gyro bit and 'a' is an acc bit
 
     // parse out ranges
@@ -397,6 +396,34 @@ void AP_ExternalAHRS_AnelloX3::convert_imu_data(const AnelloX3_BinaryPayload& bi
     imu_data.fusion_status_y = bin_payload.fusion_status_y;
     imu_data.fusion_status_z = bin_payload.fusion_status_z;
 
+#if HAL_LOGGING_ENABLED
+    auto now =  AP_HAL::micros64();
+    // @LoggerMessage: VNKF
+    // @Description: VectorNav INS Kalman Filter data
+    // @Field: TimeUS: Time since system startup
+    // @Field: InsStatus: VectorNav INS health status
+    // @Field: Lat: Latitude
+    // @Field: Lon: Longitude
+    // @Field: Alt: Altitude
+    // @Field: VelN: Velocity Northing
+    // @Field: VelE: Velocity Easting
+    // @Field: VelD: Velocity Downing
+    // @Field: PosU: Filter estimated position uncertainty
+    // @Field: VelU: Filter estimated Velocity uncertainty
+
+    AP::logger().WriteStreaming("APX3", "TimeUS,BootNS,SyncNS,AX1,AY1,AZ1,WX1,WY1,WZ1,OG_WX,OG_WY,OG_WZ,MAG_X,MAG_Y,MAG_Z,Temp,AccRange,GyroRange,FOGRange,FusStatX,FusStatY,FusStatZ",
+                       "QQQffffffffffffffffBBB",
+                       now,
+                       bin_payload.mcu_time, bin_payload.sync_time,
+                       imu_data.mems_accel.x, imu_data.mems_accel.y, imu_data.mems_accel.z,
+                       imu_data.mems_gyro.x, imu_data.mems_gyro.y, imu_data.mems_gyro.z,
+                       imu_data.fog_gyro.x, imu_data.fog_gyro.y, imu_data.fog_gyro.z,
+                       imu_data.mag.x, imu_data.mag.y, imu_data.mag.z,
+                       imu_data.temp, imu_data.mems_acc_range, imu_data.mems_gyro_range, imu_data.fog_gyro_range,
+                       imu_data.fusion_status_x, imu_data.fusion_status_y, imu_data.fusion_status_z);
+#endif  // HAL_LOGGING_ENABLED
+
 }
+
 
 #endif // AP_EXTERNAL_AHRS_MICROSTRAIN5_ENABLED 
