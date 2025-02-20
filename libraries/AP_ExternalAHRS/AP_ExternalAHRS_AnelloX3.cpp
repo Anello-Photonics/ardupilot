@@ -197,7 +197,10 @@ const char* AP_ExternalAHRS_AnelloX3::get_name() const
 bool AP_ExternalAHRS_AnelloX3::healthy(void) const
 {
     uint32_t now = AP_HAL::millis();
-    return (now - last_imu_pkt < 40);
+
+    // unhealthy if packet delayed or fusion status flags are raised
+    return (now - last_imu_pkt < 40 && imu_data.fusion_status_x == 0 &&
+            imu_data.fusion_status_y == 0 && imu_data.fusion_status_z == 0);
 }
 
 bool AP_ExternalAHRS_AnelloX3::initialised(void) const
@@ -216,13 +219,13 @@ bool AP_ExternalAHRS_AnelloX3::pre_arm_check(char *failure_msg, uint8_t failure_
 
 void AP_ExternalAHRS_AnelloX3::get_filter_status(nav_filter_status &status) const
 {
-    // dummy function for now
+    // no filter status info from sensor 
 }
 
 // get variances
 bool AP_ExternalAHRS_AnelloX3::get_variances(float &velVar, float &posVar, float &hgtVar, Vector3f &magVar, float &tasVar) const
 {
-    // dummy function for now
+    // no variance data from sensor
     return false;
 }
 
@@ -230,7 +233,7 @@ bool AP_ExternalAHRS_AnelloX3::get_variances(float &velVar, float &posVar, float
 // get variances
 uint8_t AP_ExternalAHRS_AnelloX3::num_gps_sensors(void) const
 {
-    // dummy function for now
+    // system does not host GPS sensors
     return 0;
 }
 
@@ -407,29 +410,50 @@ void AP_ExternalAHRS_AnelloX3::convert_imu_data(const AnelloX3_BinaryPayload& bi
 
 #if HAL_LOGGING_ENABLED
     auto now =  AP_HAL::micros64();
-    // @LoggerMessage: VNKF
-    // @Description: VectorNav INS Kalman Filter data
+    // @LoggerMessage: APX3 -> attempting to replace this with the more eff logging
+    // @Description: Anello Photonics X3 IMU data
     // @Field: TimeUS: Time since system startup
-    // @Field: InsStatus: VectorNav INS health status
-    // @Field: Lat: Latitude
-    // @Field: Lon: Longitude
-    // @Field: Alt: Altitude
-    // @Field: VelN: Velocity Northing
-    // @Field: VelE: Velocity Easting
-    // @Field: VelD: Velocity Downing
-    // @Field: PosU: Filter estimated position uncertainty
-    // @Field: VelU: Filter estimated Velocity uncertainty
+    // @Field: BootNS: Time since IMU startup
+    // @Field: SyncNS: Time since last sync signal
+    // @Field: AX1: Accel x value
+    // @Field: AY1: Accel y value
+    // @Field: AZ1: Accel z value
+    // @Field: WX1: Mems gyro x value
+    // @Field: WY1: Mems gyro y value
+    // @Field: WZ1: Mems gyro z value
+    // @Field: OG_WX: FOG gyro x value
+    // @Field: OG_WY: FOG gyro y value
+    // @Field: OG_WZ: FOG gyro z value
 
-    AP::logger().WriteStreaming("APX3", "TimeUS,BootNS,SyncNS,AX1,AY1,AZ1,WX1,WY1,WZ1,OG_WX,OG_WY,OG_WZ,MAG_X,MAG_Y,MAG_Z,Temp,AccRange,GyroRange,FOGRange,FusStatX,FusStatY,FusStatZ",
-                       "QQQffffffffffffffffBBB",
+    
+    AP::logger().WriteStreaming("AX31", "TimeUS,BootNS,SyncNS,AX1,AY1,AZ1,WX1,WY1,WZ1,OG_WX,OG_WY,OG_WZ", "QQQfffffffff",
                        now,
                        bin_payload.mcu_time, bin_payload.sync_time,
                        imu_data.mems_accel.x, imu_data.mems_accel.y, imu_data.mems_accel.z,
                        imu_data.mems_gyro.x, imu_data.mems_gyro.y, imu_data.mems_gyro.z,
-                       imu_data.fog_gyro.x, imu_data.fog_gyro.y, imu_data.fog_gyro.z,
-                       imu_data.mag.x, imu_data.mag.y, imu_data.mag.z,
-                       imu_data.temp, imu_data.mems_acc_range, imu_data.mems_gyro_range, imu_data.fog_gyro_range,
-                       imu_data.fusion_status_x, imu_data.fusion_status_y, imu_data.fusion_status_z);
+                       imu_data.fog_gyro.x, imu_data.fog_gyro.y, imu_data.fog_gyro.z
+                       );
+
+    // @LoggerMessage: APX3 -> attempting to replace this with the more eff logging
+    // @Description: Anello Photonics X3 IMU data
+    // @Field: TimeUS: Time since system startup
+    // @Field: BootNS: Time since IMU startup
+    // @Field: SyncNS: Time since last sync signal
+    // @Field: AX1: Accel x value
+    // @Field: AY1: Accel y value
+    // @Field: AZ1: Accel z value
+    // @Field: WX1: Mems gyro x value
+    // @Field: WY1: Mems gyro y value
+    // @Field: WZ1: Mems gyro z value
+    // @Field: OG_WX: FOG gyro x value
+    // @Field: OG_WY: FOG gyro y value
+    // @Field: OG_WZ: FOG gyro z value
+
+    
+    AP::logger().WriteStreaming("AX32", "TimeUS,MAG_X,MAG_Y,MAG_Z,Temp,FusStatX,FusStatY,FusStatZ",
+                       "QffffBBB",
+                       now, imu_data.mag.x, imu_data.mag.y, imu_data.mag.z,
+                       imu_data.temp, imu_data.fusion_status_x, imu_data.fusion_status_y, imu_data.fusion_status_z);
 #endif  // HAL_LOGGING_ENABLED
 
 }
