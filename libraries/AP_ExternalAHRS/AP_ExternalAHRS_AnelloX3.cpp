@@ -38,6 +38,8 @@ AP_ExternalAHRS_AnelloX3::AP_ExternalAHRS_AnelloX3(AP_ExternalAHRS *_frontend,
         AP_ExternalAHRS::state_t &_state): AP_ExternalAHRS_backend(_frontend, _state)
 {
     auto &sm = AP::serialmanager();
+    
+    // will attach to the first SERIALx port with type AHRS
     uart = sm.find_serial(AP_SerialManager::SerialProtocol_AHRS, 0);
     baudrate = sm.find_baudrate(AP_SerialManager::SerialProtocol_AHRS, 0);
     port_num = sm.find_portnum(AP_SerialManager::SerialProtocol_AHRS, 0);
@@ -47,10 +49,11 @@ AP_ExternalAHRS_AnelloX3::AP_ExternalAHRS_AnelloX3(AP_ExternalAHRS *_frontend,
         return;
     }
 
-    // hold of on mag inclusion until we have shown imu works
-    set_default_sensors( uint16_t(AP_ExternalAHRS::AvailableSensor::IMU)); 
+    set_default_sensors( uint16_t(AP_ExternalAHRS::AvailableSensor::IMU) ||
+            uint16_t(AP_ExternalAHRS::AvailableSensor::COMPASS) ); 
 
-    if (!hal.scheduler->thread_create(FUNCTOR_BIND_MEMBER(&AP_ExternalAHRS_AnelloX3::update_thread, void), "AHRS", 2048, AP_HAL::Scheduler::PRIORITY_SPI, 0)) {
+    if (!hal.scheduler->thread_create(FUNCTOR_BIND_MEMBER(&AP_ExternalAHRS_AnelloX3::update_thread, void),
+                "AHRS", 2048, AP_HAL::Scheduler::PRIORITY_SPI, 0)) {
         AP_BoardConfig::allocation_error("Anello X3 failed to allocate ExternalAHRS update thread");
     }
 
@@ -71,9 +74,7 @@ void AP_ExternalAHRS_AnelloX3::update_thread(void)
     }
 }
 
-
-
-// Builds packets by looking at each individual byte, once a full packet has been read in it checks the checksum then handles the packet.
+// recieves incoming UART stream and recognizes once a valid packet has been registered
 void AP_ExternalAHRS_AnelloX3::build_packet()
 {
     if (uart == nullptr) {
@@ -98,6 +99,7 @@ void AP_ExternalAHRS_AnelloX3::build_packet()
     }
 }
 
+// parsing state machine for incoming bytes
 bool AP_ExternalAHRS_AnelloX3::handle_byte(const uint8_t b, DescriptorSet& descriptor)
 {
     switch (message_in.state) {
@@ -151,7 +153,6 @@ bool AP_ExternalAHRS_AnelloX3::handle_byte(const uint8_t b, DescriptorSet& descr
 // Posts data from an imu packet to `state` and `handle_external` methods
 void AP_ExternalAHRS_AnelloX3::post_imu() const
 {
-    // note that we will have to find a way to post as two separate INSs
     {
         WITH_SEMAPHORE(state.sem);
         state.accel = imu_data.mems_accel;
@@ -164,7 +165,7 @@ void AP_ExternalAHRS_AnelloX3::post_imu() const
         AP_ExternalAHRS::ins_data_message_t ins {
             accel: imu_data.mems_accel,
             gyro: imu_data.mems_gyro,
-            temperature: -300 // update this later after confirming these post
+            temperature: imu_data.temp 
         };
         AP::ins().handle_external(ins);
     }
@@ -188,7 +189,6 @@ int8_t AP_ExternalAHRS_AnelloX3::get_port(void) const
     return port_num;
 };
 
-// Get model/type name
 const char* AP_ExternalAHRS_AnelloX3::get_name() const
 {
     return "Anello X3";
@@ -237,6 +237,7 @@ uint8_t AP_ExternalAHRS_AnelloX3::num_gps_sensors(void) const
     return 0;
 }
 
+// checksum verification
 bool AP_ExternalAHRS_AnelloX3::valid_packet(const AnelloX3_Packet & packet)
 {
     uint8_t checksum_one = 0;
@@ -255,6 +256,7 @@ bool AP_ExternalAHRS_AnelloX3::valid_packet(const AnelloX3_Packet & packet)
     return packet.checksum[0] == checksum_one && packet.checksum[1] == checksum_two;
 }
 
+// directs differnt message types to resp parsers (currently, only IMU)
 AP_ExternalAHRS_AnelloX3::DescriptorSet AP_ExternalAHRS_AnelloX3::handle_packet(const AnelloX3_Packet& packet)
 {
     const DescriptorSet descriptor = packet.descriptor_set();
@@ -266,13 +268,12 @@ AP_ExternalAHRS_AnelloX3::DescriptorSet AP_ExternalAHRS_AnelloX3::handle_packet(
     return descriptor;
 }
 
+// unpacking function for the X3 IMU messages
 void AP_ExternalAHRS_AnelloX3::handle_imu(const AnelloX3_Packet& packet)
 {
-    // unpacking function for the X3 IMU messages
 
     // storage for parsing out raw data payload
     AnelloX3_BinaryPayload bin_payload;
-
 
     // keep track of last recv packet
     last_imu_pkt = AP_HAL::millis(); 
@@ -362,9 +363,7 @@ void AP_ExternalAHRS_AnelloX3::handle_imu(const AnelloX3_Packet& packet)
 
     // convert the binary data to actual values
    convert_imu_data(bin_payload);
-    
 }
-
 
 // convert the binary data to actual values
 void AP_ExternalAHRS_AnelloX3::convert_imu_data(const AnelloX3_BinaryPayload& bin_payload)
@@ -377,9 +376,9 @@ void AP_ExternalAHRS_AnelloX3::convert_imu_data(const AnelloX3_BinaryPayload& bi
     imu_data.fog_gyro_range = bin_payload.fog_range;
 
     // calculate mems acc data
-    imu_data.mems_accel.x = bin_payload.ax1 * imu_data.mems_acc_range * 3.05e-5;
-    imu_data.mems_accel.y = bin_payload.ay1 * imu_data.mems_acc_range * 3.05e-5;
-    imu_data.mems_accel.z = bin_payload.az1 * imu_data.mems_acc_range * 3.05e-5;
+    imu_data.mems_accel.x = bin_payload.ax1 * imu_data.mems_acc_range * 3.05e-5 * 9.81; // conv from g to m/s^2
+    imu_data.mems_accel.y = bin_payload.ay1 * imu_data.mems_acc_range * 3.05e-5 * 9.81;
+    imu_data.mems_accel.z = bin_payload.az1 * imu_data.mems_acc_range * 3.05e-5 * 9.81;
 
 
     //GCS_SEND_TEXT(MAV_SEVERITY_INFO, "mems_acc bin vals: %x, %x, %x", bin_payload.ax1, bin_payload.ay1, bin_payload.az1);
@@ -437,17 +436,13 @@ void AP_ExternalAHRS_AnelloX3::convert_imu_data(const AnelloX3_BinaryPayload& bi
     // @LoggerMessage: APX3 -> attempting to replace this with the more eff logging
     // @Description: Anello Photonics X3 IMU data
     // @Field: TimeUS: Time since system startup
-    // @Field: BootNS: Time since IMU startup
-    // @Field: SyncNS: Time since last sync signal
-    // @Field: AX1: Accel x value
-    // @Field: AY1: Accel y value
-    // @Field: AZ1: Accel z value
-    // @Field: WX1: Mems gyro x value
-    // @Field: WY1: Mems gyro y value
-    // @Field: WZ1: Mems gyro z value
-    // @Field: OG_WX: FOG gyro x value
-    // @Field: OG_WY: FOG gyro y value
-    // @Field: OG_WZ: FOG gyro z value
+    // @Field: MAG_X: Mag x value
+    // @Field: MAG_Y: Mag y value
+    // @Field: MAG_Z: Mag z value
+    // @Field: Temp: system temperature, in Celsius
+    // @Field: FusStatX: fusion status for the x-axis IMU
+    // @Field: FusStatY: fusion status for the y-axis IMU
+    // @Field: FusStatZ: fusion status for the z-axis IMU
 
     
     AP::logger().WriteStreaming("AX32", "TimeUS,MAG_X,MAG_Y,MAG_Z,Temp,FusStatX,FusStatY,FusStatZ",
