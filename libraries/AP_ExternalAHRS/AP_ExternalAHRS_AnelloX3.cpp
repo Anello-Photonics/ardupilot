@@ -30,7 +30,7 @@
 #include <AP_SerialManager/AP_SerialManager.h>
 #include <AP_Math/AP_Math.h>
 #include <inttypes.h>
-
+#include <AP_HAL/utility/sparse-endian.h>
 
 extern const AP_HAL::HAL &hal;
 
@@ -271,98 +271,119 @@ AP_ExternalAHRS_AnelloX3::DescriptorSet AP_ExternalAHRS_AnelloX3::handle_packet(
 // unpacking function for the X3 IMU messages
 void AP_ExternalAHRS_AnelloX3::handle_imu(const AnelloX3_Packet& packet)
 {
-
-    // storage for parsing out raw data payload
-    AnelloX3_BinaryPayload bin_payload;
-
     // keep track of last recv packet
     last_imu_pkt = AP_HAL::millis(); 
 
-    for (int i=0; i < packet.payload_length(); i++) {
-        if (i >= 0 && i < 8) {
-            // mcu time section, 8 bytes
-            bin_payload.mcu_time |= packet.payload[i] << i*8;
-        }
-        if (i >= 8 && i < 16) {
-            // sync time section, 8 bytes
-            bin_payload.sync_time |= packet.payload[i] << ((i - 8) * 8);
-        }
-        if (i >= 16 && i < 18) {
-            // ax1 section, 2 bytes
-            bin_payload.ax1 |= packet.payload[i] << ((i - 16) * 8);
-        }
-        if (i >= 18 && i < 20) {
-            // ay1 section, 2 bytes
-            bin_payload.ay1 |= packet.payload[i] << ((i - 18) * 8);
-        }
-        if (i >= 20 && i < 22) {
-            // az1 section, 2 bytes
-            bin_payload.az1 |= packet.payload[i] << ((i - 20) * 8);
-        }
-        if (i >= 22 && i < 24) {
-            // wx1 section, 2 bytes
-            bin_payload.wx1 |= packet.payload[i] << ((i - 22) * 8);
-        }
-        if (i >= 24 && i < 26) {
-            // wy1 section, 2 bytes
-            bin_payload.wy1 |= packet.payload[i] << ((i - 24) * 8);
-        }
-        if (i >= 26 && i < 28) {
-            // wz1 section, 2 bytes
-            bin_payload.wz1 |= packet.payload[i] << ((i - 26) * 8);
-        }
-        if (i >= 28 && i < 32) {
-            // og_wx section, 4 bytes
-            bin_payload.og_wx |= packet.payload[i] << ((i - 28) * 8);
-        }
-        if (i >= 32 && i < 36) {
-            // og_wy section, 4 bytes
-            bin_payload.og_wy |= packet.payload[i] << ((i - 32) * 8);
-        }
-        if (i >= 36 && i < 40) {
-            // og_wz section, 4 bytes
-            bin_payload.og_wz |= packet.payload[i] << ((i - 36) * 8);
-        }
-        if (i >= 40 && i < 42) {
-            // mag_x section, 2 bytes
-            bin_payload.mag_x |= packet.payload[i] << ((i - 40) * 8);
-        }
-        if (i >= 42 && i < 44) {
-            // mag_y section, 2 bytes
-            bin_payload.mag_y |= packet.payload[i] << ((i - 42) * 8);
-        }
-        if (i >= 44 && i < 46) {
-            // mag_z section, 2 bytes
-            bin_payload.mag_z |= packet.payload[i] << ((i - 44) * 8);
-        }
-        if (i >= 46 && i < 48) {
-            // temp section, 2 bytes
-            bin_payload.temp |= packet.payload[i] << ((i - 46) * 8);
-        }
-        if (i >= 48 && i < 50) {
-            // mems_ranges section, 2 bytes
-            bin_payload.mems_ranges |= packet.payload[i] << ((i - 48) * 8);
-        }
-        if (i >= 50 && i < 52) {
-            // fog_range section, 2 bytes
-            bin_payload.fog_range |= packet.payload[i] << ((i - 50) * 8);
-        }
-        if (i >= 52 && i < 53) {
-            // fusion_status_x section, 1 byte (?)
-            bin_payload.fusion_status_x |= packet.payload[i] << ((i - 52) * 8);
-        }
-        if (i >= 53 && i < 54) {
-            // fusion_status_y section, 1 byte (?)
-            bin_payload.fusion_status_y |= packet.payload[i] << ((i - 53) * 8);
-        }
-        if (i >= 54 && i < 55) {
-            // fusion_status_z section, 1 byte (?)
-            bin_payload.fusion_status_z |= packet.payload[i] << ((i - 54) * 8);
+    // struct for holding raw binary data with endian conversion
+    struct AnelloX3_BinaryPayload bin_payload;
+
+    // state variables for unpacking
+    enum IMUPayloadOrder chunk = IMUPayloadOrder::TIMES;
+    int i = 0;
+
+    // go through payload chunk-by-chunk
+    while (i < packet.payload_length()) {
+        switch (chunk) {
+            case IMUPayloadOrder::TIMES:
+
+                bin_payload.mcu_time = le64toh_ptr(packet.payload + i);
+                i+= 8;
+
+                bin_payload.sync_time = le64toh_ptr(packet.payload + i);
+                i += 8;
+
+                chunk = IMUPayloadOrder::ACC;
+                break;
+
+            case IMUPayloadOrder::ACC:
+
+                bin_payload.ax1 = le16toh_ptr(packet.payload + i);
+                i+= 2;
+
+                bin_payload.ay1 = le16toh_ptr(packet.payload + i);
+                i += 2;
+
+                bin_payload.az1 = le16toh_ptr(packet.payload + i);
+                i += 2;
+
+                chunk = IMUPayloadOrder::M_GYRO; 
+                break;
+
+            case IMUPayloadOrder::M_GYRO:
+                bin_payload.wx1 = le16toh_ptr(packet.payload + i);
+                i+= 2;
+
+                bin_payload.wy1 = le16toh_ptr(packet.payload + i);
+                i += 2;
+
+                bin_payload.wz1 = le16toh_ptr(packet.payload + i);
+                i += 2;
+
+                chunk = IMUPayloadOrder::F_GYRO; 
+
+                break;
+
+            case IMUPayloadOrder::F_GYRO:
+                bin_payload.og_wx = le32toh_ptr(packet.payload + i);
+                i+= 4;
+
+                bin_payload.og_wy = le32toh_ptr(packet.payload + i);
+                i += 4;
+
+                bin_payload.og_wz = le32toh_ptr(packet.payload + i);
+                i += 4;
+
+                chunk = IMUPayloadOrder::MAG; 
+
+                break;
+
+            case IMUPayloadOrder::MAG:
+                bin_payload.mag_x = le16toh_ptr(packet.payload + i);
+                i+= 2;
+
+                bin_payload.mag_y = le16toh_ptr(packet.payload + i);
+                i += 2;
+
+                bin_payload.mag_z = le16toh_ptr(packet.payload + i);
+                i += 2;
+
+                chunk = IMUPayloadOrder::TEMP; 
+
+                break;
+
+            case IMUPayloadOrder::TEMP:
+                bin_payload.temp = le16toh_ptr(packet.payload + i);
+                i+= 2;
+
+                chunk = IMUPayloadOrder::RANGES; 
+
+                break;
+
+            case IMUPayloadOrder::RANGES:
+                bin_payload.mems_ranges = le16toh_ptr(packet.payload + i);
+                i+= 2;
+
+                bin_payload.fog_range = le16toh_ptr(packet.payload + i);
+                i+= 2;
+
+                chunk = IMUPayloadOrder::FUS_STATS; 
+
+                break;
+
+
+            case IMUPayloadOrder::FUS_STATS:
+                bin_payload.fusion_status_x = packet.payload[i++];
+                bin_payload.fusion_status_y = packet.payload[i++];
+                bin_payload.fusion_status_z = packet.payload[i++];
+
+                break;
+
+            default:
+                break;
         }
     }
 
-    // convert the binary data to actual values
-   convert_imu_data(bin_payload);
+    convert_imu_data(bin_payload);
 }
 
 // convert the binary data to actual values

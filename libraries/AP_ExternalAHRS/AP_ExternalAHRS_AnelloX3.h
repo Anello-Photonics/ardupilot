@@ -28,10 +28,16 @@ class AP_ExternalAHRS_AnelloX3: public AP_ExternalAHRS_backend
 public:
     AP_ExternalAHRS_AnelloX3(AP_ExternalAHRS *frontend, AP_ExternalAHRS::state_t &state);
 
+    // message type identifiers
     enum class DescriptorSet {
         IMUData = 253
     };
 
+    // bit sizes of payload regions
+    enum class IMUPayloadOrder {
+        TIMES, ACC, M_GYRO, F_GYRO,
+        MAG, TEMP, RANGES, FUS_STATS
+    };
 
     // get serial port number, -1 for not enabled
     int8_t get_port(void) const override;
@@ -154,6 +160,8 @@ private:
     uint32_t last_imu_pkt;
 
     struct {
+        uint64_t b_time;
+        uint64_t s_time;
         Vector3f mems_accel;
         Vector3f mems_gyro;
         Vector3f fog_gyro;
