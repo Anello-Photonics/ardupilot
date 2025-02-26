@@ -70,7 +70,7 @@ void AP_ExternalAHRS_AnelloX3::update_thread(void)
 
     while (true) {
         build_packet();
-        hal.scheduler->delay_microseconds(100);
+        hal.scheduler->delay_microseconds(500);
     }
 }
 
