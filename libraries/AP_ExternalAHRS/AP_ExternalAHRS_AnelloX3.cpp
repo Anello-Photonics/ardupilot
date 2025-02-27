@@ -32,6 +32,7 @@
 #include <inttypes.h>
 #include <AP_HAL/utility/sparse-endian.h>
 
+
 extern const AP_HAL::HAL &hal;
 
 AP_ExternalAHRS_AnelloX3::AP_ExternalAHRS_AnelloX3(AP_ExternalAHRS *_frontend,
@@ -70,6 +71,12 @@ void AP_ExternalAHRS_AnelloX3::update_thread(void)
 
     while (true) {
         build_packet();
+
+#ifdef APX3_DEBUG
+        hal.console->printf("packet starts: %lld, packet successes: %lld",
+                packet_starts, packet_finishes);
+#endif
+
         hal.scheduler->delay_microseconds(1000);
     }
 }
@@ -105,6 +112,11 @@ bool AP_ExternalAHRS_AnelloX3::handle_byte(const uint8_t b, DescriptorSet& descr
     switch (message_in.state) {
         case ParseState::WaitingFor_SyncOne:
             if (b == SYNC_ONE) {
+#ifdef APX3_DEBUG
+                //keep track of how many times we see the first magic symbol
+                packet_starts++;
+#endif
+
                 message_in.packet.header[0] = b;
                 message_in.state = ParseState::WaitingFor_SyncTwo;
             }
@@ -140,6 +152,12 @@ bool AP_ExternalAHRS_AnelloX3::handle_byte(const uint8_t b, DescriptorSet& descr
                 message_in.index = 0;
 
                 if (valid_packet(message_in.packet)) {
+
+#ifdef APX3_DEBUG
+                //keep track of how many times we see the first magic symbol
+                packet_finishes++;
+#endif
+
                     descriptor = handle_packet(message_in.packet);
                     return true;
                 }
