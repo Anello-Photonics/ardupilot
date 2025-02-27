@@ -278,110 +278,63 @@ void AP_ExternalAHRS_AnelloX3::handle_imu(const AnelloX3_Packet& packet)
     struct AnelloX3_BinaryPayload bin_payload;
 
     // state variables for unpacking
-    enum IMUPayloadOrder chunk = IMUPayloadOrder::TIMES;
     int i = 0;
 
     // go through payload chunk-by-chunk
-    while (i < packet.payload_length()) {
-        switch (chunk) {
-            case IMUPayloadOrder::TIMES:
+    bin_payload.mcu_time = le64toh_ptr(packet.payload + i);
+    i+= 8;
 
-                bin_payload.mcu_time = le64toh_ptr(packet.payload + i);
-                i+= 8;
+    bin_payload.sync_time = le64toh_ptr(packet.payload + i);
+    i += 8;
 
-                bin_payload.sync_time = le64toh_ptr(packet.payload + i);
-                i += 8;
+    bin_payload.ax1 = le16toh_ptr(packet.payload + i);
+    i+= 2;
 
-                chunk = IMUPayloadOrder::ACC;
-                break;
+    bin_payload.ay1 = le16toh_ptr(packet.payload + i);
+    i += 2;
 
-            case IMUPayloadOrder::ACC:
+    bin_payload.az1 = le16toh_ptr(packet.payload + i);
+    i += 2;
+    
+    bin_payload.wx1 = le16toh_ptr(packet.payload + i);
+    i+= 2;
 
-                bin_payload.ax1 = le16toh_ptr(packet.payload + i);
-                i+= 2;
+    bin_payload.wy1 = le16toh_ptr(packet.payload + i);
+    i += 2;
 
-                bin_payload.ay1 = le16toh_ptr(packet.payload + i);
-                i += 2;
+    bin_payload.wz1 = le16toh_ptr(packet.payload + i);
+    i += 2;
 
-                bin_payload.az1 = le16toh_ptr(packet.payload + i);
-                i += 2;
+    bin_payload.og_wx = le32toh_ptr(packet.payload + i);
+    i+= 4;
 
-                chunk = IMUPayloadOrder::M_GYRO; 
-                break;
+    bin_payload.og_wy = le32toh_ptr(packet.payload + i);
+    i += 4;
 
-            case IMUPayloadOrder::M_GYRO:
-                bin_payload.wx1 = le16toh_ptr(packet.payload + i);
-                i+= 2;
+    bin_payload.og_wz = le32toh_ptr(packet.payload + i);
+    i += 4;
 
-                bin_payload.wy1 = le16toh_ptr(packet.payload + i);
-                i += 2;
+    bin_payload.mag_x = le16toh_ptr(packet.payload + i);
+    i+= 2;
 
-                bin_payload.wz1 = le16toh_ptr(packet.payload + i);
-                i += 2;
+    bin_payload.mag_y = le16toh_ptr(packet.payload + i);
+    i += 2;
 
-                chunk = IMUPayloadOrder::F_GYRO; 
+    bin_payload.mag_z = le16toh_ptr(packet.payload + i);
+    i += 2;
 
-                break;
+    bin_payload.temp = le16toh_ptr(packet.payload + i);
+    i+= 2;
 
-            case IMUPayloadOrder::F_GYRO:
-                bin_payload.og_wx = le32toh_ptr(packet.payload + i);
-                i+= 4;
+    bin_payload.mems_ranges = le16toh_ptr(packet.payload + i);
+    i+= 2;
 
-                bin_payload.og_wy = le32toh_ptr(packet.payload + i);
-                i += 4;
+    bin_payload.fog_range = le16toh_ptr(packet.payload + i);
+    i+= 2;
 
-                bin_payload.og_wz = le32toh_ptr(packet.payload + i);
-                i += 4;
-
-                chunk = IMUPayloadOrder::MAG; 
-
-                break;
-
-            case IMUPayloadOrder::MAG:
-                bin_payload.mag_x = le16toh_ptr(packet.payload + i);
-                i+= 2;
-
-                bin_payload.mag_y = le16toh_ptr(packet.payload + i);
-                i += 2;
-
-                bin_payload.mag_z = le16toh_ptr(packet.payload + i);
-                i += 2;
-
-                chunk = IMUPayloadOrder::TEMP; 
-
-                break;
-
-            case IMUPayloadOrder::TEMP:
-                bin_payload.temp = le16toh_ptr(packet.payload + i);
-                i+= 2;
-
-                chunk = IMUPayloadOrder::RANGES; 
-
-                break;
-
-            case IMUPayloadOrder::RANGES:
-                bin_payload.mems_ranges = le16toh_ptr(packet.payload + i);
-                i+= 2;
-
-                bin_payload.fog_range = le16toh_ptr(packet.payload + i);
-                i+= 2;
-
-                chunk = IMUPayloadOrder::FUS_STATS; 
-
-                break;
-
-
-            case IMUPayloadOrder::FUS_STATS:
-                bin_payload.fusion_status_x = packet.payload[i++];
-                bin_payload.fusion_status_y = packet.payload[i++];
-                bin_payload.fusion_status_z = packet.payload[i++];
-
-                break;
-
-            default:
-                break;
-        }
-    }
+    bin_payload.fusion_status_x = packet.payload[i++];
+    bin_payload.fusion_status_y = packet.payload[i++];
+    bin_payload.fusion_status_z = packet.payload[i++];
 
     convert_imu_data(bin_payload);
 }
