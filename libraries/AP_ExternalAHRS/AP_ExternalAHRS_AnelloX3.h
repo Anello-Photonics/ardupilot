@@ -35,12 +35,6 @@ public:
         IMUData = 253
     };
 
-    // bit sizes of payload regions
-    enum class IMUPayloadOrder {
-        TIMES, ACC, M_GYRO, F_GYRO,
-        MAG, TEMP, RANGES, FUS_STATS
-    };
-
     // get serial port number, -1 for not enabled
     int8_t get_port(void) const override;
 
