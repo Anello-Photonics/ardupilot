@@ -53,7 +53,7 @@ AP_ExternalAHRS_AnelloX3::AP_ExternalAHRS_AnelloX3(AP_ExternalAHRS *_frontend,
             uint16_t(AP_ExternalAHRS::AvailableSensor::COMPASS) ); 
 
     if (!hal.scheduler->thread_create(FUNCTOR_BIND_MEMBER(&AP_ExternalAHRS_AnelloX3::update_thread, void),
-                "AHRS", 2048, AP_HAL::Scheduler::PRIORITY_SPI, 0)) {
+                "AHRS", 2048, AP_HAL::Scheduler::PRIORITY_UART, 0)) {
         AP_BoardConfig::allocation_error("Anello X3 failed to allocate ExternalAHRS update thread");
     }
 
