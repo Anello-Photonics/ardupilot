@@ -364,17 +364,17 @@ void AP_ExternalAHRS_AnelloX3::convert_imu_data(const AnelloX3_BinaryPayload& bi
     imu_data.mems_gyro.z = bin_payload.wz1 * imu_data.mems_gyro_range * 3.5e-5 * DEG_TO_RAD;
 
     // calculate fog gyro data
-    imu_data.fog_gyro.x = bin_payload.og_wx * 1e-7 * DEG_TO_RAD;
-    imu_data.fog_gyro.y = bin_payload.og_wy * 1e-7 * DEG_TO_RAD;
-    imu_data.fog_gyro.z = bin_payload.og_wz * 1e-7 * DEG_TO_RAD;
+    imu_data.fog_gyro.x = bin_payload.og_wx * 1.e-7 * DEG_TO_RAD;
+    imu_data.fog_gyro.y = bin_payload.og_wy * 1.e-7 * DEG_TO_RAD;
+    imu_data.fog_gyro.z = bin_payload.og_wz * 1.e-7 * DEG_TO_RAD;
 
     // calculate mag data
-    imu_data.mag.x = bin_payload.mag_x / 4096;
-    imu_data.mag.y = bin_payload.mag_y / 4096;
-    imu_data.mag.z = bin_payload.mag_z / 4096;
+    imu_data.mag.x = bin_payload.mag_x / 4.096; // combined conv gauss to milligauss
+    imu_data.mag.y = bin_payload.mag_y / 4.096;
+    imu_data.mag.z = bin_payload.mag_z / 4.096;
 
     // calculate temperature
-    imu_data.temp = bin_payload.temp / 100;
+    imu_data.temp = bin_payload.temp / 100.;
 
     // transfer statuses
     imu_data.fusion_status_x = bin_payload.fusion_status_x;
