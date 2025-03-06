@@ -54,10 +54,13 @@ public:
     bool get_variances(float &velVar, float &posVar, float &hgtVar, Vector3f &magVar, float &tasVar) const override;
     virtual uint8_t num_gps_sensors(void) const override;
 
+    // listens for uart data and parses it into message types
     void build_packet();
 
+    // publishes the imu data
     void post_imu() const;
 
+    // alternate to update(), added to the scheduler
     void update_thread();
 
 
@@ -90,30 +93,30 @@ private:
 
     struct AnelloX3_BinaryPayload {
         uint64_t mcu_time = 0; // ns -- time since power on
-        uint64_t sync_time= 0; // ns -- time of external sync pulse
-        int16_t ax1= 0; // g = value * (range * 0.0000305) -- scaled sensor accel
-        int16_t ay1= 0; 
-        int16_t az1= 0;
-        int16_t wx1= 0; // dps = value * (range * 0.0000305) -- scaled sensor rate
-        int16_t wy1= 0;
-        int16_t wz1= 0;
-        int32_t og_wx= 0; // dps * 1e7 -- scaled sensor rate for FOG 
-        int32_t og_wy= 0;
-        int32_t og_wz= 0;
-        int16_t mag_x= 0; // g * 4096 -- scaled magnetometer data
-        int16_t mag_y= 0;
-        int16_t mag_z= 0;
-        int16_t temp= 0; // degC * 100 -- scaled temperature value
-        uint16_t mems_ranges= 0; // first 5 bits accel, next 11 bits gyro
-        uint16_t fog_range= 0; // fog range in dps
+        uint64_t sync_time = 0; // ns -- time of external sync pulse
+        int16_t ax1 = 0; // g = value * (range * 0.0000305) -- scaled sensor accel
+        int16_t ay1 = 0; 
+        int16_t az1 = 0;
+        int16_t wx1 = 0; // dps = value * (range * 0.0000305) -- scaled sensor rate
+        int16_t wy1 = 0;
+        int16_t wz1 = 0;
+        int32_t og_wx = 0; // dps * 1e7 -- scaled sensor rate for FOG 
+        int32_t og_wy = 0;
+        int32_t og_wz = 0;
+        int16_t mag_x = 0; // g * 4096 -- scaled magnetometer data
+        int16_t mag_y = 0;
+        int16_t mag_z = 0;
+        int16_t temp = 0; // degC * 100 -- scaled temperature value
+        uint16_t mems_ranges = 0; // first 5 bits accel, next 11 bits gyro
+        uint16_t fog_range = 0; // fog range in dps
         // bitfield flag values
         // BIT 0 Gyro discrepancy
         // BIT 1 Temperature uncontrolled
         // BIT 2 Over current error
         // BIT 3 SiPhOG supply voltage bad
-        uint8_t fusion_status_x= 0;
-        uint8_t fusion_status_y= 0;
-        uint8_t fusion_status_z= 0;
+        uint8_t fusion_status_x = 0;
+        uint8_t fusion_status_y = 0;
+        uint8_t fusion_status_z = 0;
     };
 
 
@@ -150,11 +153,15 @@ private:
     } message_in;
 
 
+    // passes byte from serial stream to the parser
     bool handle_byte(const uint8_t b, DescriptorSet& descriptor);
 
     // Returns true if the fletcher checksum for the packet is valid, else false.
     static bool valid_packet(const AnelloX3_Packet &packet);
+
+    // pulls out data from successfully constructed message
     DescriptorSet handle_packet(const AnelloX3_Packet& packet);
+
     // Collects data from an imu packet into `imu_data`
     void handle_imu(const AnelloX3_Packet &packet);
     
