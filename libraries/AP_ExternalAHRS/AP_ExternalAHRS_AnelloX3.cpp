@@ -73,11 +73,15 @@ void AP_ExternalAHRS_AnelloX3::update_thread(void)
         build_packet();
 
 #ifdef APX3_DEBUG
-        hal.console->printf("packet starts: %lld, packet successes: %lld",
+        //print at approx 1 second intervals
+        if (packet_starts % 200 == 0) {
+        GCS_SEND_TEXT(MAV_SEVERITY_INFO, "packet starts: %lld, packet successes: %lld",
                 packet_starts, packet_finishes);
+        }
+        // replace with hal.console->printf() but how do we actually get that output?
 #endif
 
-        hal.scheduler->delay_microseconds(1000);
+        hal.scheduler->delay_microseconds(500);
     }
 }
 
@@ -174,7 +178,7 @@ void AP_ExternalAHRS_AnelloX3::post_imu() const
     {
         WITH_SEMAPHORE(state.sem);
         state.accel = imu_data.mems_accel;
-        state.gyro = imu_data.mems_gyro;
+        state.gyro = imu_data.fog_gyro;
 
         state.have_quaternion = false;
     }
@@ -182,7 +186,7 @@ void AP_ExternalAHRS_AnelloX3::post_imu() const
     {
         AP_ExternalAHRS::ins_data_message_t ins {
             accel: imu_data.mems_accel,
-            gyro: imu_data.mems_gyro,
+            gyro: imu_data.fog_gyro,
             temperature: imu_data.temp 
         };
         AP::ins().handle_external(ins);
@@ -215,6 +219,12 @@ const char* AP_ExternalAHRS_AnelloX3::get_name() const
 bool AP_ExternalAHRS_AnelloX3::healthy(void) const
 {
     uint32_t now = AP_HAL::millis();
+
+
+    GCS_SEND_TEXT(MAV_SEVERITY_INFO, "now - last_imu_pkt = %lu", now - last_imu_pkt);
+    GCS_SEND_TEXT(MAV_SEVERITY_INFO, "x stat: %uh", imu_data.fusion_status_x);
+    GCS_SEND_TEXT(MAV_SEVERITY_INFO, "y stat: %uh", imu_data.fusion_status_y);
+    GCS_SEND_TEXT(MAV_SEVERITY_INFO, "z stat: %uh", imu_data.fusion_status_z);
 
     // unhealthy if packet delayed or fusion status flags are raised
     return (now - last_imu_pkt < 40 && imu_data.fusion_status_x == 0 &&
@@ -370,10 +380,6 @@ void AP_ExternalAHRS_AnelloX3::convert_imu_data(const AnelloX3_BinaryPayload& bi
     imu_data.mems_accel.y = bin_payload.ay1 * imu_data.mems_acc_range * 3.05e-5 * 9.81;
     imu_data.mems_accel.z = bin_payload.az1 * imu_data.mems_acc_range * 3.05e-5 * 9.81;
 
-
-    //GCS_SEND_TEXT(MAV_SEVERITY_INFO, "mems_acc bin vals: %x, %x, %x", bin_payload.ax1, bin_payload.ay1, bin_payload.az1);
-    //GCS_SEND_TEXT(MAV_SEVERITY_INFO, "mems_acc vals: %f, %f, %f", imu_data.mems_accel.x, imu_data.mems_accel.y, imu_data.mems_accel.z);
-
     // calculate mems gyro data
     imu_data.mems_gyro.x = bin_payload.wx1 * imu_data.mems_gyro_range * 3.5e-5 * DEG_TO_RAD;
     imu_data.mems_gyro.y = bin_payload.wy1 * imu_data.mems_gyro_range * 3.5e-5 * DEG_TO_RAD;
@@ -390,7 +396,7 @@ void AP_ExternalAHRS_AnelloX3::convert_imu_data(const AnelloX3_BinaryPayload& bi
     imu_data.mag.z = bin_payload.mag_z * 0.2441;
 
     // calculate temperature
-    imu_data.temp = bin_payload.temp * 1e-2.;
+    imu_data.temp = bin_payload.temp * 1e-2;
 
     // transfer statuses
     imu_data.fusion_status_x = bin_payload.fusion_status_x;
@@ -399,7 +405,7 @@ void AP_ExternalAHRS_AnelloX3::convert_imu_data(const AnelloX3_BinaryPayload& bi
 
 #if HAL_LOGGING_ENABLED
     auto now =  AP_HAL::micros64();
-    // @LoggerMessage: APX3 -> attempting to replace this with the more eff logging
+    // @LoggerMessage: AX31
     // @Description: Anello Photonics X3 IMU data
     // @Field: TimeUS: Time since system startup
     // @Field: BootNS: Time since IMU startup
@@ -423,8 +429,8 @@ void AP_ExternalAHRS_AnelloX3::convert_imu_data(const AnelloX3_BinaryPayload& bi
                        imu_data.fog_gyro.x, imu_data.fog_gyro.y, imu_data.fog_gyro.z
                        );
 
-    // @LoggerMessage: APX3 -> attempting to replace this with the more eff logging
-    // @Description: Anello Photonics X3 IMU data
+    // @LoggerMessage: AX32
+    // @Description: Anello Photonics X3 Mag + other data
     // @Field: TimeUS: Time since system startup
     // @Field: MAG_X: Mag x value
     // @Field: MAG_Y: Mag y value

@@ -23,7 +23,7 @@
 #include "AP_ExternalAHRS_backend.h"
 #include <AP_HAL/AP_HAL.h>
 
-#define APX3_DEBUG 1
+//#define APX3_DEBUG 
 
 class AP_ExternalAHRS_AnelloX3: public AP_ExternalAHRS_backend
 {
