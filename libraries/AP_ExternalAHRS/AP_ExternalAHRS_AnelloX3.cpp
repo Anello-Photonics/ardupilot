@@ -175,18 +175,23 @@ bool AP_ExternalAHRS_AnelloX3::handle_byte(const uint8_t b, DescriptorSet& descr
 // Posts data from an imu packet to `state` and `handle_external` methods
 void AP_ExternalAHRS_AnelloX3::post_imu() const
 {
+    // save values to the eahr's state variable
     {
         WITH_SEMAPHORE(state.sem);
         state.accel = imu_data.mems_accel;
-        state.gyro = imu_data.fog_gyro;
-
+        if (option_is_set(AP_ExternalAHRS::OPTIONS::X3_USE_MEMS_GYRO)) {
+            state.gyro = imu_data.mems_gyro;
+        } else {
+            state.gyro = imu_data.fog_gyro;
+        }
         state.have_quaternion = false;
     }
 
+    // notify the ins to publish our data
     {
         AP_ExternalAHRS::ins_data_message_t ins {
-            accel: imu_data.mems_accel,
-            gyro: imu_data.fog_gyro,
+            accel: state.accel,
+            gyro: state.gyro,
             temperature: imu_data.temp 
         };
         AP::ins().handle_external(ins);
@@ -221,10 +226,10 @@ bool AP_ExternalAHRS_AnelloX3::healthy(void) const
     uint32_t now = AP_HAL::millis();
 
 
-    GCS_SEND_TEXT(MAV_SEVERITY_INFO, "now - last_imu_pkt = %lu", now - last_imu_pkt);
-    GCS_SEND_TEXT(MAV_SEVERITY_INFO, "x stat: %uh", imu_data.fusion_status_x);
-    GCS_SEND_TEXT(MAV_SEVERITY_INFO, "y stat: %uh", imu_data.fusion_status_y);
-    GCS_SEND_TEXT(MAV_SEVERITY_INFO, "z stat: %uh", imu_data.fusion_status_z);
+    //GCS_SEND_TEXT(MAV_SEVERITY_INFO, "now - last_imu_pkt = %lu", now - last_imu_pkt);
+    //GCS_SEND_TEXT(MAV_SEVERITY_INFO, "x stat: %uh", imu_data.fusion_status_x);
+    //GCS_SEND_TEXT(MAV_SEVERITY_INFO, "y stat: %uh", imu_data.fusion_status_y);
+    //GCS_SEND_TEXT(MAV_SEVERITY_INFO, "z stat: %uh", imu_data.fusion_status_z);
 
     // unhealthy if packet delayed or fusion status flags are raised
     return (now - last_imu_pkt < 40 && imu_data.fusion_status_x == 0 &&
