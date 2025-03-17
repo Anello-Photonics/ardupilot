@@ -45,14 +45,17 @@ AP_ExternalAHRS_AnelloX3::AP_ExternalAHRS_AnelloX3(AP_ExternalAHRS *_frontend,
     baudrate = sm.find_baudrate(AP_SerialManager::SerialProtocol_AHRS, 0);
     port_num = sm.find_portnum(AP_SerialManager::SerialProtocol_AHRS, 0);
 
+    // couldnt find a UART
     if (!uart) {
         GCS_SEND_TEXT(MAV_SEVERITY_ERROR, "Anello X3 ExternalAHRS no UART");
         return;
     }
 
+    // configure to match the X3's default sensor avail
     set_default_sensors(uint16_t(AP_ExternalAHRS::AvailableSensor::IMU) ||
             uint16_t(AP_ExternalAHRS::AvailableSensor::COMPASS)); 
 
+    // request a thread to run the X3 be created 
     if (!hal.scheduler->thread_create(FUNCTOR_BIND_MEMBER(&AP_ExternalAHRS_AnelloX3::update_thread, void),
                 "AHRS", 2048, AP_HAL::Scheduler::PRIORITY_UART, 0)) {
         AP_BoardConfig::allocation_error("Anello X3 failed to allocate ExternalAHRS update thread");
@@ -62,6 +65,7 @@ AP_ExternalAHRS_AnelloX3::AP_ExternalAHRS_AnelloX3(AP_ExternalAHRS *_frontend,
     GCS_SEND_TEXT(MAV_SEVERITY_INFO, "Anello X3 ExternalAHRS initialised");
 }
 
+// main loop for X3 thread
 void AP_ExternalAHRS_AnelloX3::update_thread(void)
 {
     if (!port_open) {
@@ -92,6 +96,7 @@ void AP_ExternalAHRS_AnelloX3::build_packet()
         return;
     }
     
+    // read bytes from the UART, passing each to the parser
     WITH_SEMAPHORE(sem);
     uint32_t nbytes = MIN(uart->available(), 2048u);
     while (nbytes--> 0) {

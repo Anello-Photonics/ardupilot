@@ -43,7 +43,7 @@ public:
         build_packet();
     };
     
-    // Get model/type name
+    // get model/type name
     const char* get_name() const override;
 
     // accessors for AP_AHRS
@@ -70,9 +70,11 @@ private:
     int8_t port_num;
     bool port_open = false;
     
+    // HAL components
     AP_HAL::UARTDriver *uart;
     HAL_Semaphore sem;
 
+    // parsing state machine defines
     const uint8_t SYNC_ONE = 0xC5;
     const uint8_t SYNC_TWO = 0x50;
 
@@ -90,7 +92,7 @@ private:
         WaitingFor_Checksum
     };
 
-
+    // raw data unpacking structure
     struct AnelloX3_BinaryPayload {
         uint64_t mcu_time = 0; // ns -- time since power on
         uint64_t sync_time = 0; // ns -- time of external sync pulse
@@ -119,54 +121,7 @@ private:
         uint8_t fusion_status_z = 0;
     };
 
-
-    struct AnelloX3_Packet {
-        uint8_t header[4]; // incl 2-byte preamble, 1-byte message type, and 1-byte message length
-        uint8_t payload[255];
-        uint8_t checksum[2]; // calculated not incl preamble nor checksum bytes
-
-        // Gets the payload length
-        uint8_t payload_length() const WARN_IF_UNUSED {
-            return header[3];
-        }
-
-        // Sets the payload length
-        void payload_length(const uint8_t len) {
-            header[3] = len;
-        }
-
-        // Gets the descriptor set
-        DescriptorSet descriptor_set() const WARN_IF_UNUSED {
-            return DescriptorSet(header[2]);
-        }
-
-        // Sets the descriptor set (without validation)
-        void descriptor_set(const uint8_t descriptor_set) {
-            header[2] = descriptor_set;
-        }
-    };
-
-    struct {
-        AnelloX3_Packet packet;
-        ParseState state;
-        uint8_t index;
-    } message_in;
-
-
-    // passes byte from serial stream to the parser
-    bool handle_byte(const uint8_t b, DescriptorSet& descriptor);
-
-    // Returns true if the fletcher checksum for the packet is valid, else false.
-    static bool valid_packet(const AnelloX3_Packet &packet);
-
-    // pulls out data from successfully constructed message
-    DescriptorSet handle_packet(const AnelloX3_Packet& packet);
-
-    // Collects data from an imu packet into `imu_data`
-    void handle_imu(const AnelloX3_Packet &packet);
-    
-    uint32_t last_imu_pkt;
-
+    // processed data structure
     struct {
         uint64_t b_time;
         uint64_t s_time;
@@ -182,6 +137,57 @@ private:
         uint8_t fusion_status_y;
         uint8_t fusion_status_z;
     } imu_data;
+
+
+    // full incoming packet structure
+    struct AnelloX3_Packet {
+        uint8_t header[4]; // incl 2-byte preamble, 1-byte message type, and 1-byte message length
+        uint8_t payload[255];
+        uint8_t checksum[2]; // calculated not incl preamble nor checksum bytes
+
+        // gets the payload length
+        uint8_t payload_length() const WARN_IF_UNUSED {
+            return header[3];
+        }
+
+        // sets the payload length
+        void payload_length(const uint8_t len) {
+            header[3] = len;
+        }
+
+        // gets the descriptor set
+        DescriptorSet descriptor_set() const WARN_IF_UNUSED {
+            return DescriptorSet(header[2]);
+        }
+
+        // sets the descriptor set (without validation)
+        void descriptor_set(const uint8_t descriptor_set) {
+            header[2] = descriptor_set;
+        }
+    };
+
+    // message in state variables
+    struct {
+        AnelloX3_Packet packet;
+        ParseState state;
+        uint8_t index;
+    } message_in;
+
+
+    // passes byte from serial stream to the parser
+    bool handle_byte(const uint8_t b, DescriptorSet& descriptor);
+
+    // returns true if the checksum for the packet is valid, else false.
+    static bool valid_packet(const AnelloX3_Packet &packet);
+
+    // pulls out data from successfully constructed message
+    DescriptorSet handle_packet(const AnelloX3_Packet& packet);
+
+    // collects data from an imu packet into `imu_data`
+    void handle_imu(const AnelloX3_Packet &packet);
+    
+    // timestamp of last recv packet
+    uint32_t last_imu_pkt;
 
     //  converts raw binary data to actual values
     void convert_imu_data(const AnelloX3_BinaryPayload& bin_payload);
