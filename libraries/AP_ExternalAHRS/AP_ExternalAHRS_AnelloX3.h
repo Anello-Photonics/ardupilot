@@ -23,8 +23,6 @@
 #include "AP_ExternalAHRS_backend.h"
 #include <AP_HAL/AP_HAL.h>
 
-//#define APX3_DEBUG 
-
 class AP_ExternalAHRS_AnelloX3: public AP_ExternalAHRS_backend
 {
 public:
@@ -77,12 +75,6 @@ private:
     // parsing state machine defines
     const uint8_t SYNC_ONE = 0xC5;
     const uint8_t SYNC_TWO = 0x50;
-
-#ifdef APX3_DEBUG
-    uint64_t packet_starts = 0;
-    uint64_t packet_finishes = 0;
-#endif
-
     enum class ParseState {
         WaitingFor_SyncOne, // 0xC5
         WaitingFor_SyncTwo, // 0x50

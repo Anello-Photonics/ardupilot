@@ -75,16 +75,6 @@ void AP_ExternalAHRS_AnelloX3::update_thread(void)
 
     while (true) {
         build_packet();
-
-#ifdef APX3_DEBUG
-        //print at approx 1 second intervals
-        if (packet_starts % 200 == 0) {
-        GCS_SEND_TEXT(MAV_SEVERITY_INFO, "packet starts: %lld, packet successes: %lld",
-                packet_starts, packet_finishes);
-        }
-        // replace with hal.console->printf() but how do we actually get that output?
-#endif
-
         hal.scheduler->delay_microseconds(500);
     }
 }
@@ -121,11 +111,6 @@ bool AP_ExternalAHRS_AnelloX3::handle_byte(const uint8_t b, DescriptorSet& descr
     switch (message_in.state) {
         case ParseState::WaitingFor_SyncOne:
             if (b == SYNC_ONE) {
-#ifdef APX3_DEBUG
-                //keep track of how many times we see the first magic symbol
-                packet_starts++;
-#endif
-
                 message_in.packet.header[0] = b;
                 message_in.state = ParseState::WaitingFor_SyncTwo;
             }
@@ -161,12 +146,6 @@ bool AP_ExternalAHRS_AnelloX3::handle_byte(const uint8_t b, DescriptorSet& descr
                 message_in.index = 0;
 
                 if (valid_packet(message_in.packet)) {
-
-#ifdef APX3_DEBUG
-                //keep track of how many times we see the first magic symbol
-                packet_finishes++;
-#endif
-
                     descriptor = handle_packet(message_in.packet);
                     return true;
                 }
@@ -229,12 +208,6 @@ const char* AP_ExternalAHRS_AnelloX3::get_name() const
 bool AP_ExternalAHRS_AnelloX3::healthy(void) const
 {
     uint32_t now = AP_HAL::millis();
-
-
-    //GCS_SEND_TEXT(MAV_SEVERITY_INFO, "now - last_imu_pkt = %lu", now - last_imu_pkt);
-    //GCS_SEND_TEXT(MAV_SEVERITY_INFO, "x stat: %uh", imu_data.fusion_status_x);
-    //GCS_SEND_TEXT(MAV_SEVERITY_INFO, "y stat: %uh", imu_data.fusion_status_y);
-    //GCS_SEND_TEXT(MAV_SEVERITY_INFO, "z stat: %uh", imu_data.fusion_status_z);
 
     // unhealthy if packet delayed or fusion status flags are raised
     return (now - last_imu_pkt < 40 && imu_data.fusion_status_x == 0 &&
