@@ -404,7 +404,10 @@ void AP_ExternalAHRS_AnelloX3::convert_imu_data(const AnelloX3_BinaryPayload& bi
     // @Field: OG_WZ: FOG gyro z value
 
     
-    AP::logger().WriteStreaming("AX31", "TimeUS,BootNS,SyncNS,AX1,AY1,AZ1,WX1,WY1,WZ1,OG_WX,OG_WY,OG_WZ", "QQQfffffffff",
+    AP::logger().WriteStreaming("AX31", "TimeUS,BootNS,SyncNS,AX1,AY1,AZ1,WX1,WY1,WZ1,OG_WX,OG_WY,OG_WZ",
+                                        "sssoooEEEEEE",
+                                        "FII000000000",
+                                        "QQQfffffffff",
                        now,
                        bin_payload.mcu_time, bin_payload.sync_time,
                        imu_data.mems_accel.x, imu_data.mems_accel.y, imu_data.mems_accel.z,
@@ -425,7 +428,9 @@ void AP_ExternalAHRS_AnelloX3::convert_imu_data(const AnelloX3_BinaryPayload& bi
 
     
     AP::logger().WriteStreaming("AX32", "TimeUS,MAG_X,MAG_Y,MAG_Z,Temp,FusStatX,FusStatY,FusStatZ",
-                       "QffffBBB",
+                                        "sGGGO---",
+                                        "FCCC0---",
+                                        "QffffBBB",
                        now, imu_data.mag.x, imu_data.mag.y, imu_data.mag.z,
                        imu_data.temp, imu_data.fusion_status_x, imu_data.fusion_status_y, imu_data.fusion_status_z);
 #endif  // HAL_LOGGING_ENABLED
