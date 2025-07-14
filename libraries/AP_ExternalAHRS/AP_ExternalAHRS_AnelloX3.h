@@ -49,8 +49,8 @@ public:
     bool initialised(void) const override;
     bool pre_arm_check(char *failure_msg, uint8_t failure_msg_len) const override;
     void get_filter_status(nav_filter_status &status) const override;
-    bool get_variances(float &velVar, float &posVar, float &hgtVar, Vector3f &magVar, float &tasVar) const override;
-    virtual uint8_t num_gps_sensors(void) const override;
+    bool get_variances(float &velVar, float &posVar, float &hgtVar, Vector3f &magVar, float &tasVar) const;
+    virtual uint8_t num_gps_sensors(void) const;
 
     // listens for uart data and parses it into message types
     void build_packet();
