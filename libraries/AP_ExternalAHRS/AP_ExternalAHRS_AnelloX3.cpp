@@ -90,8 +90,8 @@ void AP_ExternalAHRS_AnelloX3::build_packet()
     WITH_SEMAPHORE(sem);
     uint32_t nbytes = MIN(uart->available(), 2048u);
     while (nbytes--> 0) {
-        uint8_t b;
-        if (!uart->read(b)) {
+        int16_t b = uart->read();
+        if (b==-1) {
             break;
         }
         DescriptorSet descriptor;
