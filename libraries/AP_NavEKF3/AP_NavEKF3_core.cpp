@@ -1067,7 +1067,20 @@ void NavEKF3_core::CovariancePrediction(Vector3F *rotVarVecPtr)
     Vector14 processNoiseVariance = {};
 
     if (!inhibitDelAngBiasStates) {
-        ftype dAngBiasVar = sq(sq(dt) * constrain_ftype(frontend->_gyroBiasProcessNoise, 0.0, 1.0));
+        ftype dAngBiasVar;
+#if AP_EXTERNAL_AHRS_ANELLOX3_ENABLED
+        // EAHRS set to initialize last
+        if (core_index == frontend->num_cores) 
+        { 
+            // use the EAHRS gyro bias process noise
+            dAngBiasVar = sq(sq(dt) * constrain_ftype(frontend->_eAhrsGyroBiasProcessNoise, 0.0, 1.0)); 
+        }
+        else 
+#endif
+        {
+            // use the EKF gyro bias process noise
+            dAngBiasVar = sq(sq(dt) * constrain_ftype(frontend->_gyroBiasProcessNoise, 0.0, 1.0));
+        }
         for (uint8_t i=0; i<=2; i++) processNoiseVariance[i] = dAngBiasVar;
     }
 
@@ -1170,8 +1183,19 @@ void NavEKF3_core::CovariancePrediction(Vector3F *rotVarVecPtr)
         zeroRows(P,0,3);
         zeroCols(P,0,3);
     } else {
-        ftype _gyrNoise = constrain_ftype(frontend->_gyrNoise, 0.0f, 1.0f);
-        daxVar = dayVar = dazVar = sq(dt*_gyrNoise);
+#if AP_EXTERNAL_AHRS_ANELLOX3_ENABLED
+        // EAHRS set to initialize last
+        if (core_index == frontend->num_cores) 
+        {
+            // use the EAHRS gyro noise parameters
+            daxVar = dayVar = dazVar = sq(dt * constrain_ftype(frontend->_eAhrsGyrNoise, 0.0f, 1.0f)); // STEP 4 this is the gyro noise param
+        } 
+        else 
+#endif
+        {
+            // use the EKF gyro noise parameters
+            daxVar = dayVar = dazVar = sq(dt * constrain_ftype(frontend->_gyrNoise, 0.0f, 1.0f)); // STEP 4 this is the gyro noise param
+        }
     }
     ftype _accNoise = badIMUdata ? BAD_IMU_DATA_ACC_P_NSE : constrain_ftype(frontend->_accNoise, 0.0f, BAD_IMU_DATA_ACC_P_NSE);
     dvxVar = dvyVar = dvzVar = sq(dt*_accNoise);

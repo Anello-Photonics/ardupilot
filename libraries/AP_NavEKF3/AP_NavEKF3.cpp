@@ -40,6 +40,9 @@
 #define CHECK_SCALER_DEFAULT    100
 #define FLOW_USE_DEFAULT        1
 #define WIND_P_NSE_DEFAULT      0.2
+#define EAHRS_GYRO_P_NSE_DEFAULT  1.44E-05f
+#define EAHRS_GBIAS_P_NSE_DEFAULT 2.43E-06f
+
 
 #elif APM_BUILD_TYPE(APM_BUILD_Rover)
 // rover defaults
@@ -66,6 +69,9 @@
 #define CHECK_SCALER_DEFAULT    100
 #define FLOW_USE_DEFAULT        1
 #define WIND_P_NSE_DEFAULT      0.1
+#define EAHRS_GYRO_P_NSE_DEFAULT  1.44E-05f
+#define EAHRS_GBIAS_P_NSE_DEFAULT 2.43E-06f
+
 
 #elif APM_BUILD_TYPE(APM_BUILD_ArduPlane)
 // plane defaults
@@ -92,6 +98,9 @@
 #define CHECK_SCALER_DEFAULT    150
 #define FLOW_USE_DEFAULT        2
 #define WIND_P_NSE_DEFAULT      0.1
+#define EAHRS_GYRO_P_NSE_DEFAULT  1.44E-05f
+#define EAHRS_GBIAS_P_NSE_DEFAULT 2.43E-06f
+
 
 #else
 // build type not specified, use copter defaults
@@ -118,6 +127,8 @@
 #define CHECK_SCALER_DEFAULT    100
 #define FLOW_USE_DEFAULT        1
 #define WIND_P_NSE_DEFAULT      0.1
+#define EAHRS_GYRO_P_NSE_DEFAULT  1.44E-05f
+#define EAHRS_GBIAS_P_NSE_DEFAULT 2.43E-06f
 
 #endif // APM_BUILD_DIRECTORY
 
@@ -733,6 +744,23 @@ const AP_Param::GroupInfo NavEKF3::var_info2[] = {
     // @User: Advanced
     // @Units: m
     AP_GROUPINFO("GPS_VACC_MAX", 10, NavEKF3, _gpsVAccThreshold, 0.0f),
+
+    // @Param: EAHRS_P_NSE
+    // @DisplayName: Anello X3 external ahrs rate gyro noise (rad/s)
+    // @Description: This control disturbance noise controls the growth of estimated error due to gyro measurement errors excluding bias. Increasing it makes the flter trust the gyro measurements less and other measurements more.
+    // @Range: 0.000001 0.1
+    // @Increment: 0.0001
+    // @User: Advanced
+    // @Units: rad/s
+    AP_GROUPINFO("EAHRS_P_NSE", 12, NavEKF3, _eAhrsGyrNoise, EAHRS_GYRO_P_NSE_DEFAULT),
+
+    // @Param: EBIAS_P_NSE
+    // @DisplayName: External ahrs rate gyro bias stability (rad/s/s)
+    // @Description: This state  process noise controls growth of the gyro delta angle bias state error estimate. Increasing it makes rate gyro bias estimation faster and noisier.
+    // @Range: 0.00000001 0.001
+    // @User: Advanced
+    // @Units: rad/s/s
+    AP_GROUPINFO("EBIAS_P_NSE", 13, NavEKF3, _eAhrsGyroBiasProcessNoise, EAHRS_GBIAS_P_NSE_DEFAULT),
 
     AP_GROUPEND
 };
