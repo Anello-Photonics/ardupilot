@@ -94,7 +94,7 @@ private:
         int16_t wx1 = 0; // dps = value * (range * 0.0000305) -- scaled sensor rate
         int16_t wy1 = 0;
         int16_t wz1 = 0;
-        int32_t og_wx = 0; // dps * 1e7 -- scaled sensor rate for FOG 
+        int32_t og_wx = 0; // dps * (500 / 2^31) -- scaled sensor rate for FOG 
         int32_t og_wy = 0;
         int32_t og_wz = 0;
         int16_t mag_x = 0; // g * 4096 -- scaled magnetometer data
