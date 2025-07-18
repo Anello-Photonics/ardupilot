@@ -369,9 +369,9 @@ void AP_ExternalAHRS_AnelloX3::convert_imu_data(const AnelloX3_BinaryPayload& bi
     imu_data.mems_gyro.z = bin_payload.wz1 * imu_data.mems_gyro_range * 3.5e-5 * DEG_TO_RAD;
 
     // calculate fog gyro data
-    imu_data.fog_gyro.x = bin_payload.og_wx * 2.32830644e-7 * DEG_TO_RAD;
-    imu_data.fog_gyro.y = bin_payload.og_wy * 2.32830644e-7 * DEG_TO_RAD;
-    imu_data.fog_gyro.z = bin_payload.og_wz * 2.32830644e-7 * DEG_TO_RAD;
+    imu_data.fog_gyro.x = bin_payload.og_wx / 4294967.296 * DEG_TO_RAD;
+    imu_data.fog_gyro.y = bin_payload.og_wy / 4294967.296 * DEG_TO_RAD;
+    imu_data.fog_gyro.z = bin_payload.og_wz / 4294967.296 * DEG_TO_RAD;
 
     // calculate mag data
     imu_data.mag.x = bin_payload.mag_x * 0.2441; // combined conv gauss to milligauss
