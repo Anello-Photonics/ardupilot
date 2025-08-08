@@ -24,6 +24,7 @@
 #include <AP_Param/AP_Param.h>
 #include <AP_NavEKF/AP_Nav_Common.h>
 #include <AP_NavEKF/AP_NavEKF_Source.h>
+#include <AP_InertialSensor/AP_InertialSensor_config.h>
 
 class NavEKF3_core;
 class EKFGSF_yaw;
@@ -388,9 +389,9 @@ private:
     AP_Float _wndVarHgtRateScale;   // scale factor applied to wind process noise due to height rate
     AP_Float _magEarthProcessNoise; // Earth magnetic field process noise : gauss/sec
     AP_Float _magBodyProcessNoise;  // Body magnetic field process noise : gauss/sec
-    AP_Float _gyrNoise;             // gyro process noise : rad/s
+    AP_Float _gyrNoise[INS_MAX_INSTANCES];             // gyro process noise : rad/s
     AP_Float _accNoise;             // accelerometer process noise : m/s^2
-    AP_Float _gyroBiasProcessNoise; // gyro bias state process noise : rad/s
+    AP_Float _gyroBiasProcessNoise[INS_MAX_INSTANCES]; // gyro bias state process noise : rad/s
     AP_Float _accelBiasProcessNoise;// accel bias state process noise : m/s^2
     AP_Int16 _hgtDelay_ms;          // effective average delay of Height measurements relative to inertial measurements (msec)
     AP_Int16  _gpsVelInnovGate;     // Percentage number of standard deviations applied to GPS velocity innovation consistency check

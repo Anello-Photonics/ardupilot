@@ -1110,14 +1110,6 @@ AP_InertialSensor::detect_backends(void)
 // macro for use by HAL_INS_PROBE_LIST
 #define GET_I2C_DEVICE(bus, address) hal.i2c_mgr->get_device(bus, address)
 
-#if HAL_EXTERNAL_AHRS_ENABLED
-    // if enabled, make the first IMU the external AHRS
-    const int8_t serial_port = AP::externalAHRS().get_port(AP_ExternalAHRS::AvailableSensor::IMU);
-    if (serial_port >= 0) {
-        ADD_BACKEND(new AP_InertialSensor_ExternalAHRS(*this, serial_port));
-    }
-#endif
-
 #if AP_SIM_INS_ENABLED
     for (uint8_t i=0; i<AP::sitl()->imu_count; i++) {
         ADD_BACKEND(AP_InertialSensor_SITL::detect(*this, i==1?INS_SITL_SENSOR_B:INS_SITL_SENSOR_A));
@@ -1255,6 +1247,14 @@ AP_InertialSensor::detect_backends(void)
     // no INS device
 #else
     #error Unrecognised HAL_INS_TYPE setting
+#endif
+
+#if HAL_EXTERNAL_AHRS_ENABLED
+    // if enabled, make the last IMU the external AHRS
+    const int8_t serial_port = AP::externalAHRS().get_port(AP_ExternalAHRS::AvailableSensor::IMU);
+    if (serial_port >= 0) {
+        ADD_BACKEND(new AP_InertialSensor_ExternalAHRS(*this, serial_port));
+    }
 #endif
 
     if (_backend_count == 0) {
