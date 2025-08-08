@@ -1067,7 +1067,7 @@ void NavEKF3_core::CovariancePrediction(Vector3F *rotVarVecPtr)
     Vector14 processNoiseVariance = {};
 
     if (!inhibitDelAngBiasStates) {
-        ftype dAngBiasVar = sq(sq(dt) * constrain_ftype(frontend->_gyroBiasProcessNoise, 0.0, 1.0));
+        ftype dAngBiasVar = sq(sq(dt) * constrain_ftype(frontend->_gyroBiasProcessNoise[gyro_index_active], 0.0, 1.0));
         for (uint8_t i=0; i<=2; i++) processNoiseVariance[i] = dAngBiasVar;
     }
 
@@ -1170,7 +1170,7 @@ void NavEKF3_core::CovariancePrediction(Vector3F *rotVarVecPtr)
         zeroRows(P,0,3);
         zeroCols(P,0,3);
     } else {
-        ftype _gyrNoise = constrain_ftype(frontend->_gyrNoise, 0.0f, 1.0f);
+        ftype _gyrNoise = constrain_ftype(frontend->_gyrNoise[gyro_index_active], 0.0f, 1.0f);
         daxVar = dayVar = dazVar = sq(dt*_gyrNoise);
     }
     ftype _accNoise = badIMUdata ? BAD_IMU_DATA_ACC_P_NSE : constrain_ftype(frontend->_accNoise, 0.0f, BAD_IMU_DATA_ACC_P_NSE);

@@ -344,7 +344,7 @@ const AP_Param::GroupInfo NavEKF3::var_info[] = {
     // @Increment: 0.0001
     // @User: Advanced
     // @Units: rad/s
-    AP_GROUPINFO("GYRO_P_NSE", 24, NavEKF3, _gyrNoise, GYRO_P_NSE_DEFAULT),
+    AP_GROUPINFO("GYRO_P_NSE", 24, NavEKF3, _gyrNoise[0], GYRO_P_NSE_DEFAULT),
 
     // @Param: ACC_P_NSE
     // @DisplayName: Accelerometer noise (m/s^2)
@@ -361,7 +361,7 @@ const AP_Param::GroupInfo NavEKF3::var_info[] = {
     // @Range: 0.00001 0.001
     // @User: Advanced
     // @Units: rad/s/s
-    AP_GROUPINFO("GBIAS_P_NSE", 26, NavEKF3, _gyroBiasProcessNoise, GBIAS_P_NSE_DEFAULT),
+    AP_GROUPINFO("GBIAS_P_NSE", 26, NavEKF3, _gyroBiasProcessNoise[0], GBIAS_P_NSE_DEFAULT),
 
     // 27 previously used for EK2_GSCL_P_NSE parameter that has been removed
 
@@ -733,6 +733,78 @@ const AP_Param::GroupInfo NavEKF3::var_info2[] = {
     // @User: Advanced
     // @Units: m
     AP_GROUPINFO("GPS_VACC_MAX", 10, NavEKF3, _gpsVAccThreshold, 0.0f),
+
+    // @Param: GBIAS_P_NSE2
+    // @DisplayName: Rate gyro bias stability (rad/s/s)
+    // @Description: This state  process noise controls growth of the gyro delta angle bias state error estimate. Increasing it makes rate gyro bias estimation faster and noisier.
+    // @Range: 0.00001 0.001
+    // @User: Advanced
+    // @Units: rad/s/s
+    AP_GROUPINFO("GBIAS_P_NSE2", 11, NavEKF3, _gyroBiasProcessNoise[1], GBIAS_P_NSE_DEFAULT),
+
+    // @Param: GYRO_P_NSE2
+    // @DisplayName: Rate gyro noise (rad/s)
+    // @Description: This control disturbance noise controls the growth of estimated error due to gyro measurement errors excluding bias. Increasing it makes the flter trust the gyro measurements less and other measurements more.
+    // @Range: 0.0001 0.1
+    // @Increment: 0.0001
+    // @User: Advanced
+    // @Units: rad/s
+    AP_GROUPINFO("GYRO_P_NSE2", 12, NavEKF3, _gyrNoise[1], GYRO_P_NSE_DEFAULT),
+
+    // @Param: GBIAS_P_NSE3
+    // @DisplayName: Rate gyro bias stability (rad/s/s)
+    // @Description: This state  process noise controls growth of the gyro delta angle bias state error estimate. Increasing it makes rate gyro bias estimation faster and noisier.
+    // @Range: 0.00001 0.001
+    // @User: Advanced
+    // @Units: rad/s/s
+    AP_GROUPINFO("GBIAS_P_NSE3", 13, NavEKF3, _gyroBiasProcessNoise[2], GBIAS_P_NSE_DEFAULT),
+
+    // @Param: GYRO_P_NSE3
+    // @DisplayName: Rate gyro noise (rad/s)
+    // @Description: This control disturbance noise controls the growth of estimated error due to gyro measurement errors excluding bias. Increasing it makes the flter trust the gyro measurements less and other measurements more.
+    // @Range: 0.0001 0.1
+    // @Increment: 0.0001
+    // @User: Advanced
+    // @Units: rad/s
+    AP_GROUPINFO("GYRO_P_NSE3", 14, NavEKF3, _gyrNoise[2], GYRO_P_NSE_DEFAULT),
+
+#if INS_MAX_INSTANCES > 3
+    // @Param: GBIAS_P_NSE4
+    // @DisplayName: Rate gyro bias stability (rad/s/s)
+    // @Description: This state  process noise controls growth of the gyro delta angle bias state error estimate. Increasing it makes rate gyro bias estimation faster and noisier.
+    // @Range: 0.00001 0.001
+    // @User: Advanced
+    // @Units: rad/s/s
+    AP_GROUPINFO("GBIAS_P_NSE4", 15, NavEKF3, _gyroBiasProcessNoise[3], GBIAS_P_NSE_DEFAULT),
+
+    // @Param: GYRO_P_NSE4
+    // @DisplayName: Rate gyro noise (rad/s)
+    // @Description: This control disturbance noise controls the growth of estimated error due to gyro measurement errors excluding bias. Increasing it makes the flter trust the gyro measurements less and other measurements more.
+    // @Range: 0.0001 0.1
+    // @Increment: 0.0001
+    // @User: Advanced
+    // @Units: rad/s
+    AP_GROUPINFO("GYRO_P_NSE4", 16, NavEKF3, _gyrNoise[3], GYRO_P_NSE_DEFAULT),
+#endif // INS_MAX_INSTANCES > 3
+
+#if INS_MAX_INSTANCES > 4
+    // @Param: GBIAS_P_NSE5
+    // @DisplayName: Rate gyro bias stability (rad/s/s)
+    // @Description: This state  process noise controls growth of the gyro delta angle bias state error estimate. Increasing it makes rate gyro bias estimation faster and noisier.
+    // @Range: 0.00001 0.001
+    // @User: Advanced
+    // @Units: rad/s/s
+    AP_GROUPINFO("GBIAS_P_NSE5", 17, NavEKF3, _gyroBiasProcessNoise[4], GBIAS_P_NSE_DEFAULT),
+
+    // @Param: GYRO_P_NSE5
+    // @DisplayName: Rate gyro noise (rad/s)
+    // @Description: This control disturbance noise controls the growth of estimated error due to gyro measurement errors excluding bias. Increasing it makes the flter trust the gyro measurements less and other measurements more.
+    // @Range: 0.0001 0.1
+    // @Increment: 0.0001
+    // @User: Advanced
+    // @Units: rad/s
+    AP_GROUPINFO("GYRO_P_NSE5", 18, NavEKF3, _gyrNoise[4], GYRO_P_NSE_DEFAULT),
+#endif // INS_MAX_INSTANCES > 4
 
     AP_GROUPEND
 };
