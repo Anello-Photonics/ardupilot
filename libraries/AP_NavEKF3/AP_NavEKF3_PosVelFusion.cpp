@@ -454,6 +454,24 @@ void NavEKF3_core::SelectVelPosFusion()
 
     // get data that has now fallen behind the fusion time horizon
     gpsDataToFuse = storedGPS.recall(gpsDataDelayed,imuDataDelayed.time_ms);
+
+#if APM_BUILD_TYPE(APM_BUILD_Replay) 
+    uint32_t gpsGapStartTime_ms = frontend->_replay_gps_kill_time * 1000;
+    uint32_t gpsGapEndTime_ms = gpsGapStartTime_ms + frontend->_replay_gps_kill_duration * 1000;
+
+    if (imuDataDelayed.time_ms > gpsGapStartTime_ms && imuDataDelayed.time_ms < gpsGapEndTime_ms) { 
+        // Reject GPS data that is within the gap
+        if (imu_index == 0) {
+            GCS_SEND_TEXT(MAV_SEVERITY_DEBUG, "GPS gap data time_ms: %u", imuDataDelayed.time_ms);
+        }
+        gpsDataToFuse = false; // don't fuse this data
+        return;
+    }
+    else if (imuDataDelayed.time_ms > (gpsGapEndTime_ms + 50*1e3)) {
+        exit(0);
+    }
+#endif // APM_BUILD_TYPE(APM_BUILD_Replay)
+
     if (gpsDataToFuse) {
         CorrectGPSForAntennaOffset(gpsDataDelayed);
         // calculate innovations and variances for reporting purposes only

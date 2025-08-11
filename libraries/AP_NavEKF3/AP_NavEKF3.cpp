@@ -806,6 +806,22 @@ const AP_Param::GroupInfo NavEKF3::var_info2[] = {
     AP_GROUPINFO("GYRO_P_NSE5", 18, NavEKF3, _gyrNoise[4], GYRO_P_NSE_DEFAULT),
 #endif // INS_MAX_INSTANCES > 4
 
+#if APM_BUILD_TYPE(APM_BUILD_Replay) 
+    // @Param: GPS_RPLY_K_T
+    // @DisplayName: Replay GPS Kill Time
+    // @Description: This is the time in seconds that the replay system will wait before killing the GPS position and velocity data.
+    // @User: Advanced
+    // @Units: s
+    AP_GROUPINFO("GPS_RPLY_K_T", 19, NavEKF3, _replay_gps_kill_time, 0),
+
+    // @Param: GPS_RPLY_K_D
+    // @DisplayName: Replay GPS Kill Duration
+    // @Description: This is the duration in seconds that the replay system will kill the GPS position and velocity data.
+    // @User: Advanced
+    // @Units: s
+    AP_GROUPINFO("GPS_RPLY_K_D", 20, NavEKF3, _replay_gps_kill_duration, 0),
+#endif // REPLAY_BUILD_TYPE(APM_BUILD_Replay)
+
     AP_GROUPEND
 };
 
