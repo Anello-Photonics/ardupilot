@@ -548,6 +548,36 @@ void NavEKF3_core::readGpsData()
     // check for new GPS data
     const auto &gps = dal.gps();
 
+#if APM_BUILD_TYPE(APM_BUILD_Replay) 
+    uint32_t gpsGapStartTime_ms = frontend->_replay_gps_kill_time * 1000;
+    uint32_t gpsGapEndTime_ms = gpsGapStartTime_ms + frontend->_replay_gps_kill_duration * 1000;
+    bool validGPSDenied = (frontend->_replay_gps_kill_duration > 0) && (frontend->_replay_gps_kill_time > 0);
+
+    replayGPSDenied = (imuDataDelayed.time_ms > gpsGapStartTime_ms && imuDataDelayed.time_ms < gpsGapEndTime_ms)
+                        && validGPSDenied;
+
+    // if we are in a GPS denied period then do not read GPS data
+    if (replayGPSDenied) { 
+        if (imu_index == frontend->_anelloX3_core) {
+            // only print once per 10 seconds
+            static uint32_t lastPrintTime_ms = 0;
+            if (lastPrintTime_ms == 0) {
+                lastPrintTime_ms = imuDataDelayed.time_ms;
+                GCS_SEND_TEXT(MAV_SEVERITY_INFO, "EKF3 GPS denied period started at %d s for %d s", (int32_t)(gpsGapStartTime_ms / 1e3), (int32_t)(frontend->_replay_gps_kill_duration));
+            }
+            else if (imuDataDelayed.time_ms - lastPrintTime_ms > 10*1e3) {
+                lastPrintTime_ms = imuDataDelayed.time_ms;
+                GCS_SEND_TEXT(MAV_SEVERITY_INFO, "EKF3 GPS denied elapsed time %d s", (int32_t)((imuDataDelayed.time_ms - gpsGapStartTime_ms) / 1e3));
+            }
+        }
+        return;
+    }
+    else if (imuDataDelayed.time_ms > (gpsGapEndTime_ms + 50*1e3) && validGPSDenied) {
+        GCS_SEND_TEXT(MAV_SEVERITY_INFO, "EKF3 GPS denied period ended at %d s", (int32_t)(gpsGapEndTime_ms / 1e3));
+        exit(0);
+    }
+#endif // APM_BUILD_TYPE(APM_BUILD_Replay)
+
     // limit update rate to avoid overflowing the FIFO buffer
     if (gps.last_message_time_ms(selected_gps) - lastTimeGpsReceived_ms <= frontend->sensorIntervalMin_ms) {
         return;

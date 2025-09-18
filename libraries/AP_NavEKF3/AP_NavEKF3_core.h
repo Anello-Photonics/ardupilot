@@ -1195,6 +1195,9 @@ private:
     uint32_t firstInitTime_ms;      // First time the initialise function was called (msec)
     uint32_t lastInitFailReport_ms; // Last time the buffer initialisation failure report was sent (msec)
     ftype tiltErrorVariance;        // variance of the angular uncertainty measured perpendicular to the vertical (rad^2)
+#if APM_BUILD_TYPE(APM_BUILD_Replay) 
+    bool replayGPSDenied;        // true if GPS data is being denied in replay mode
+#endif // APM_BUILD_TYPE(APM_BUILD_Replay)
 
     // variables used to calculate a vertical velocity that is kinematically consistent with the vertical position
     struct {

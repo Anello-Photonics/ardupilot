@@ -820,7 +820,14 @@ const AP_Param::GroupInfo NavEKF3::var_info2[] = {
     // @User: Advanced
     // @Units: s
     AP_GROUPINFO("GPS_RPLY_K_D", 20, NavEKF3, _replay_gps_kill_duration, 0),
-#endif // REPLAY_BUILD_TYPE(APM_BUILD_Replay)
+
+    // @Param: ANELLO_X3_ID
+    // @DisplayName: Anello X3 Core Instance
+    // @Description: This parameter holds the instance number of the Anello X3 IMU.
+    // @User: Advanced
+    // @Units: N/A
+    AP_GROUPINFO("ANELLO_X3_ID", 21, NavEKF3, _anelloX3_core, 0),
+#endif // APM_BUILD_TYPE(APM_BUILD_Replay)
 
     AP_GROUPEND
 };
