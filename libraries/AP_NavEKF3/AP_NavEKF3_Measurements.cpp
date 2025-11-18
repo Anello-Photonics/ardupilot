@@ -570,6 +570,7 @@ void NavEKF3_core::readGpsData()
                 GCS_SEND_TEXT(MAV_SEVERITY_INFO, "EKF3 GPS denied elapsed time %d s", (int32_t)((imuDataDelayed.time_ms - gpsGapStartTime_ms) / 1e3));
             }
         }
+        gpsGoodToAlign = false;
         return;
     }
     else if (imuDataDelayed.time_ms > (gpsGapEndTime_ms + 50*1e3) && validGPSDenied) {
@@ -735,6 +736,37 @@ void NavEKF3_core::readGpsData()
 void NavEKF3_core::readGpsYawData()
 {
     const auto &gps = dal.gps();
+
+#if APM_BUILD_TYPE(APM_BUILD_Replay) 
+    uint32_t gpsGapStartTime_ms = frontend->_replay_gps_kill_time * 1000;
+    uint32_t gpsGapEndTime_ms = gpsGapStartTime_ms + frontend->_replay_gps_kill_duration * 1000;
+    bool validGPSDenied = (frontend->_replay_gps_kill_duration > 0) && (frontend->_replay_gps_kill_time > 0);
+
+    replayGPSDenied = (imuDataDelayed.time_ms > gpsGapStartTime_ms && imuDataDelayed.time_ms < gpsGapEndTime_ms)
+                        && validGPSDenied;
+
+    // if we are in a GPS denied period then do not read GPS data
+    if (replayGPSDenied) { 
+        if (imu_index == frontend->_anelloX3_core) {
+            // only print once per 10 seconds
+            static uint32_t lastPrintTime_ms = 0;
+            if (lastPrintTime_ms == 0) {
+                lastPrintTime_ms = imuDataDelayed.time_ms;
+                GCS_SEND_TEXT(MAV_SEVERITY_INFO, "EKF3 GPS yaw denied period started at %d s for %d s", (int32_t)(gpsGapStartTime_ms / 1e3), (int32_t)(frontend->_replay_gps_kill_duration));
+            }
+            else if (imuDataDelayed.time_ms - lastPrintTime_ms > 10*1e3) {
+                lastPrintTime_ms = imuDataDelayed.time_ms;
+                GCS_SEND_TEXT(MAV_SEVERITY_INFO, "EKF3 GPS yaw denied elapsed time %d s", (int32_t)((imuDataDelayed.time_ms - gpsGapStartTime_ms) / 1e3));
+            }
+        }
+        gpsGoodToAlign = false;
+        return;
+    }
+    else if (imuDataDelayed.time_ms > (gpsGapEndTime_ms + 50*1e3) && validGPSDenied) {
+        GCS_SEND_TEXT(MAV_SEVERITY_INFO, "EKF3 GPS yaw denied period ended at %d s", (int32_t)(gpsGapEndTime_ms / 1e3));
+        exit(0);
+    }
+#endif // APM_BUILD_TYPE(APM_BUILD_Replay)
 
     // if the GPS has yaw data then fuse it as an Euler yaw angle
     float yaw_deg, yaw_accuracy_deg;
@@ -1145,6 +1177,37 @@ void NavEKF3_core::writeExtNavVelData(const Vector3f &vel, float err, uint32_t t
 void NavEKF3_core::update_gps_selection(void)
 {
     const auto &gps = dal.gps();
+
+#if APM_BUILD_TYPE(APM_BUILD_Replay) 
+    uint32_t gpsGapStartTime_ms = frontend->_replay_gps_kill_time * 1000;
+    uint32_t gpsGapEndTime_ms = gpsGapStartTime_ms + frontend->_replay_gps_kill_duration * 1000;
+    bool validGPSDenied = (frontend->_replay_gps_kill_duration > 0) && (frontend->_replay_gps_kill_time > 0);
+
+    replayGPSDenied = (imuDataDelayed.time_ms > gpsGapStartTime_ms && imuDataDelayed.time_ms < gpsGapEndTime_ms)
+                        && validGPSDenied;
+
+    // if we are in a GPS denied period then do not read GPS data
+    if (replayGPSDenied) { 
+        if (imu_index == frontend->_anelloX3_core) {
+            // only print once per 10 seconds
+            static uint32_t lastPrintTime_ms = 0;
+            if (lastPrintTime_ms == 0) {
+                lastPrintTime_ms = imuDataDelayed.time_ms;
+                GCS_SEND_TEXT(MAV_SEVERITY_INFO, "EKF3 GPS select denied period started at %d s for %d s", (int32_t)(gpsGapStartTime_ms / 1e3), (int32_t)(frontend->_replay_gps_kill_duration));
+            }
+            else if (imuDataDelayed.time_ms - lastPrintTime_ms > 10*1e3) {
+                lastPrintTime_ms = imuDataDelayed.time_ms;
+                GCS_SEND_TEXT(MAV_SEVERITY_INFO, "EKF3 GPS select denied elapsed time %d s", (int32_t)((imuDataDelayed.time_ms - gpsGapStartTime_ms) / 1e3));
+            }
+        }
+        gpsGoodToAlign = false;
+        return;
+    }
+    else if (imuDataDelayed.time_ms > (gpsGapEndTime_ms + 50*1e3) && validGPSDenied) {
+        GCS_SEND_TEXT(MAV_SEVERITY_INFO, "EKF3 GPS denied period ended at %d s", (int32_t)(gpsGapEndTime_ms / 1e3));
+        exit(0);
+    }
+#endif // APM_BUILD_TYPE(APM_BUILD_Replay)
 
     // in normal operation use the primary GPS
     selected_gps = gps.primary_sensor();
