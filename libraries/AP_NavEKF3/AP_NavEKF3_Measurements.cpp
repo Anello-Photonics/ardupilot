@@ -432,6 +432,19 @@ void NavEKF3_core::readIMUData()
     imuDataNew.delAngDT = MAX(imuDataNew.delAngDT, 1.0e-4f);
     imuDataNew.gyro_index = gyro_index_active;
 
+#if APM_BUILD_TYPE(APM_BUILD_Replay) 
+    if (imu_index == 0) {
+
+        // Update Anello X3 timing to 400 Hz
+        imuDataNew.delAng = imuDataNew.delAng / imuDataNew.delAngDT * 0.0025f;
+        imuDataNew.delVel = imuDataNew.delVel / imuDataNew.delVelDT * 0.0025f;
+        
+        imuDataNew.delAngDT = 0.0025f;
+        imuDataNew.delVelDT = 0.0025f;
+
+    }
+#endif // APM_BUILD_TYPE(APM_BUILD_Replay) 
+
     // Get current time stamp
     imuDataNew.time_ms = imuSampleTime_ms;
 
