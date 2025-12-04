@@ -549,12 +549,8 @@ void NavEKF3_core::readGpsData()
     const auto &gps = dal.gps();
 
 #if APM_BUILD_TYPE(APM_BUILD_Replay) 
-    uint32_t gpsGapStartTime_ms = frontend->_replay_gps_kill_time * 1000;
-    uint32_t gpsGapEndTime_ms = gpsGapStartTime_ms + frontend->_replay_gps_kill_duration * 1000;
-    bool validGPSDenied = (frontend->_replay_gps_kill_duration > 0) && (frontend->_replay_gps_kill_time > 0);
 
-    replayGPSDenied = (imuDataDelayed.time_ms > gpsGapStartTime_ms && imuDataDelayed.time_ms < gpsGapEndTime_ms)
-                        && validGPSDenied;
+    checkReplayGPSDeniedPeriod();
 
     // if we are in a GPS denied period then do not read GPS data
     if (replayGPSDenied) { 
@@ -562,20 +558,16 @@ void NavEKF3_core::readGpsData()
             // only print once per 10 seconds
             static uint32_t lastPrintTime_ms = 0;
             if (lastPrintTime_ms == 0) {
-                lastPrintTime_ms = imuDataDelayed.time_ms;
-                GCS_SEND_TEXT(MAV_SEVERITY_INFO, "EKF3 GPS denied period started at %d s for %d s", (int32_t)(gpsGapStartTime_ms / 1e3), (int32_t)(frontend->_replay_gps_kill_duration));
+                lastPrintTime_ms = imuDataNew.time_ms;
+                GCS_SEND_TEXT(MAV_SEVERITY_INFO, "EKF3 GPS denied period started at %f s for %f s", (float)(replayGPSDeniedStartTime_ms / 1e3), (float)(frontend->_replay_gps_kill_duration));
             }
-            else if (imuDataDelayed.time_ms - lastPrintTime_ms > 10*1e3) {
-                lastPrintTime_ms = imuDataDelayed.time_ms;
-                GCS_SEND_TEXT(MAV_SEVERITY_INFO, "EKF3 GPS denied elapsed time %d s", (int32_t)((imuDataDelayed.time_ms - gpsGapStartTime_ms) / 1e3));
+            else if (imuDataNew.time_ms - lastPrintTime_ms > 10*1e3) {
+                lastPrintTime_ms = imuDataNew.time_ms;
+                GCS_SEND_TEXT(MAV_SEVERITY_INFO, "EKF3 GPS denied elapsed time %d s", (uint32_t)((imuDataNew.time_ms - replayGPSDeniedStartTime_ms) / 1e3));
             }
         }
         gpsGoodToAlign = false;
         return;
-    }
-    else if (imuDataDelayed.time_ms > (gpsGapEndTime_ms + 50*1e3) && validGPSDenied) {
-        GCS_SEND_TEXT(MAV_SEVERITY_INFO, "EKF3 GPS denied period ended at %d s", (int32_t)(gpsGapEndTime_ms / 1e3));
-        exit(0);
     }
 #endif // APM_BUILD_TYPE(APM_BUILD_Replay)
 
@@ -738,33 +730,12 @@ void NavEKF3_core::readGpsYawData()
     const auto &gps = dal.gps();
 
 #if APM_BUILD_TYPE(APM_BUILD_Replay) 
-    uint32_t gpsGapStartTime_ms = frontend->_replay_gps_kill_time * 1000;
-    uint32_t gpsGapEndTime_ms = gpsGapStartTime_ms + frontend->_replay_gps_kill_duration * 1000;
-    bool validGPSDenied = (frontend->_replay_gps_kill_duration > 0) && (frontend->_replay_gps_kill_time > 0);
-
-    replayGPSDenied = (imuDataDelayed.time_ms > gpsGapStartTime_ms && imuDataDelayed.time_ms < gpsGapEndTime_ms)
-                        && validGPSDenied;
+    checkReplayGPSDeniedPeriod();
 
     // if we are in a GPS denied period then do not read GPS data
     if (replayGPSDenied) { 
-        if (imu_index == frontend->_anelloX3_core) {
-            // only print once per 10 seconds
-            static uint32_t lastPrintTime_ms = 0;
-            if (lastPrintTime_ms == 0) {
-                lastPrintTime_ms = imuDataDelayed.time_ms;
-                GCS_SEND_TEXT(MAV_SEVERITY_INFO, "EKF3 GPS yaw denied period started at %d s for %d s", (int32_t)(gpsGapStartTime_ms / 1e3), (int32_t)(frontend->_replay_gps_kill_duration));
-            }
-            else if (imuDataDelayed.time_ms - lastPrintTime_ms > 10*1e3) {
-                lastPrintTime_ms = imuDataDelayed.time_ms;
-                GCS_SEND_TEXT(MAV_SEVERITY_INFO, "EKF3 GPS yaw denied elapsed time %d s", (int32_t)((imuDataDelayed.time_ms - gpsGapStartTime_ms) / 1e3));
-            }
-        }
         gpsGoodToAlign = false;
         return;
-    }
-    else if (imuDataDelayed.time_ms > (gpsGapEndTime_ms + 50*1e3) && validGPSDenied) {
-        GCS_SEND_TEXT(MAV_SEVERITY_INFO, "EKF3 GPS yaw denied period ended at %d s", (int32_t)(gpsGapEndTime_ms / 1e3));
-        exit(0);
     }
 #endif // APM_BUILD_TYPE(APM_BUILD_Replay)
 
@@ -1179,33 +1150,12 @@ void NavEKF3_core::update_gps_selection(void)
     const auto &gps = dal.gps();
 
 #if APM_BUILD_TYPE(APM_BUILD_Replay) 
-    uint32_t gpsGapStartTime_ms = frontend->_replay_gps_kill_time * 1000;
-    uint32_t gpsGapEndTime_ms = gpsGapStartTime_ms + frontend->_replay_gps_kill_duration * 1000;
-    bool validGPSDenied = (frontend->_replay_gps_kill_duration > 0) && (frontend->_replay_gps_kill_time > 0);
-
-    replayGPSDenied = (imuDataDelayed.time_ms > gpsGapStartTime_ms && imuDataDelayed.time_ms < gpsGapEndTime_ms)
-                        && validGPSDenied;
+    checkReplayGPSDeniedPeriod();
 
     // if we are in a GPS denied period then do not read GPS data
     if (replayGPSDenied) { 
-        if (imu_index == frontend->_anelloX3_core) {
-            // only print once per 10 seconds
-            static uint32_t lastPrintTime_ms = 0;
-            if (lastPrintTime_ms == 0) {
-                lastPrintTime_ms = imuDataDelayed.time_ms;
-                GCS_SEND_TEXT(MAV_SEVERITY_INFO, "EKF3 GPS select denied period started at %d s for %d s", (int32_t)(gpsGapStartTime_ms / 1e3), (int32_t)(frontend->_replay_gps_kill_duration));
-            }
-            else if (imuDataDelayed.time_ms - lastPrintTime_ms > 10*1e3) {
-                lastPrintTime_ms = imuDataDelayed.time_ms;
-                GCS_SEND_TEXT(MAV_SEVERITY_INFO, "EKF3 GPS select denied elapsed time %d s", (int32_t)((imuDataDelayed.time_ms - gpsGapStartTime_ms) / 1e3));
-            }
-        }
         gpsGoodToAlign = false;
         return;
-    }
-    else if (imuDataDelayed.time_ms > (gpsGapEndTime_ms + 50*1e3) && validGPSDenied) {
-        GCS_SEND_TEXT(MAV_SEVERITY_INFO, "EKF3 GPS denied period ended at %d s", (int32_t)(gpsGapEndTime_ms / 1e3));
-        exit(0);
     }
 #endif // APM_BUILD_TYPE(APM_BUILD_Replay)
 
@@ -1571,3 +1521,28 @@ void NavEKF3_core::checkUpdateEarthField(void)
         getEarthFieldTable(loc);
     }
 }
+
+#if APM_BUILD_TYPE(APM_BUILD_Replay)
+/*
+    check if we are in a GPS denied period during replay
+*/
+void NavEKF3_core::checkReplayGPSDeniedPeriod(void)
+{
+    // assign start and end times for GPS denied period
+    replayGPSDeniedStartTime_ms = frontend->_replay_gps_kill_time * 1e3;
+    replayGPSDeniedEndTime_ms = replayGPSDeniedStartTime_ms + frontend->_replay_gps_kill_duration * 1e3;
+    replayValidGPSDenied = (replayGPSDeniedStartTime_ms > 0) && (replayGPSDeniedEndTime_ms > 0);
+
+    if (replayValidGPSDenied) {
+        replayGPSDenied = (imuDataNew.time_ms > replayGPSDeniedStartTime_ms && imuDataNew.time_ms < replayGPSDeniedEndTime_ms);
+    } else {
+        replayGPSDenied = false;
+    }
+
+    // if gps denied valid and we are 50 seconds past the end time, exit the replay
+    if (replayValidGPSDenied && (imuDataNew.time_ms > (replayGPSDeniedEndTime_ms + (50*1e3)))) {
+        GCS_SEND_TEXT(MAV_SEVERITY_INFO, "EKF3 GPS denied period ended at %f s", (float)(replayGPSDeniedEndTime_ms / 1e3));
+        exit(0);
+    }
+}
+#endif // APM_BUILD_TYPE(APM_BUILD_Replay)
