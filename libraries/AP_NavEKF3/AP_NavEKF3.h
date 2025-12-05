@@ -470,6 +470,9 @@ private:
     bool option_is_enabled(Option option) const {
         return (_options & (uint32_t)option) != 0;
     }
+    AP_Float _replay_gps_kill_time; // time in seconds to kill GPS replay after a gap in the GPS data
+    AP_Float _replay_gps_kill_duration; // distance in metres to kill GPS replay after a gap in the GPS data  
+    AP_Int8 _anelloX3_core;         // Instance number of the Anello X3 IMU
 
 // Possible values for _flowUse
 #define FLOW_USE_NONE    0

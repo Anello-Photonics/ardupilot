@@ -1247,6 +1247,12 @@ private:
     uint32_t firstInitTime_ms;      // First time the initialise function was called (msec)
     uint32_t lastInitFailReport_ms; // Last time the buffer initialisation failure report was sent (msec)
     ftype tiltErrorVariance;        // variance of the angular uncertainty measured perpendicular to the vertical (rad^2)
+#if APM_BUILD_TYPE(APM_BUILD_Replay) 
+    bool replayGPSDenied;        // true if GPS data is being denied in replay mode
+    uint32_t replayGPSDeniedStartTime_ms; // time when GPS denial started in replay mode
+    uint32_t replayGPSDeniedEndTime_ms;   // time when GPS denial ended in replay mode
+    bool replayValidGPSDenied;    // true if the GPS denial period in replay mode is valid
+#endif // APM_BUILD_TYPE(APM_BUILD_Replay)
 
     // variables used to calculate a vertical velocity that is kinematically consistent with the vertical position
     struct {
@@ -1571,6 +1577,11 @@ private:
     // handle earth field updates
     void getEarthFieldTable(const Location &loc);
     void checkUpdateEarthField(void);
+
+#if APM_BUILD_TYPE(APM_BUILD_Replay)
+    // replay mode GPS denial
+    void checkReplayGPSDeniedPeriod(void);
+#endif // APM_BUILD_TYPE(APM_BUILD_Replay)
     
     // timing statistics
     struct ekf_timing timing;

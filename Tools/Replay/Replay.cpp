@@ -147,6 +147,13 @@ void Replay::_parse_command_line(uint8_t argc, char * const argv[])
         {0, false, 0, 0}
     };
 
+    // Open output file to save parameters
+    FILE *parm_output_file = fopen("logs/LASTLOG_PARAMS.TXT", "w");
+    if (parm_output_file == nullptr) {
+        ::fprintf(stderr, "Failed to open logs/LASTLOG_PARAMS.TXT for writing\n");
+        exit(1);
+    }
+
     GetOptLong gopt(argc, argv, "p:F:Ph", options);
 
     int opt;
@@ -156,13 +163,17 @@ void Replay::_parse_command_line(uint8_t argc, char * const argv[])
             const char *eq = strchr(gopt.optarg, '=');
             if (eq == NULL) {
                 ::printf("Usage: -p NAME=VALUE\n");
+                fclose(parm_output_file);
                 exit(1);
             }
             struct user_parameter *u = NEW_NOTHROW user_parameter;
             strncpy(u->name, gopt.optarg, eq-gopt.optarg);
+            u->name[eq - gopt.optarg] = '\0';  // Null-terminate string
             u->value = atof(eq+1);
             u->next = user_parameters;
             user_parameters = u;
+            // Write parameter to file
+            ::fprintf(parm_output_file, "%s=%.8f\n", u->name, u->value);
             break;
         }
 
@@ -185,9 +196,11 @@ void Replay::_parse_command_line(uint8_t argc, char * const argv[])
         case 'h':
         default:
             usage();
+            fclose(parm_output_file);
             exit(0);
         }
     }
+    fclose(parm_output_file);
 
     argv += gopt.optind;
     argc -= gopt.optind;

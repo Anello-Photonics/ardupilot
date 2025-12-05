@@ -744,6 +744,29 @@ const AP_Param::GroupInfo NavEKF3::var_info2[] = {
     // @User: Advanced
     AP_GROUPINFO("OPTIONS",  11, NavEKF3, _options, 0),
 
+#if APM_BUILD_TYPE(APM_BUILD_Replay) 
+    // @Param: GPS_RPLY_K_T
+    // @DisplayName: Replay GPS Kill Time
+    // @Description: This is the time in seconds that the replay system will wait before killing the GPS position and velocity data.
+    // @User: Advanced
+    // @Units: s
+    AP_GROUPINFO("GPS_RPLY_K_T", 19, NavEKF3, _replay_gps_kill_time, 0),
+
+    // @Param: GPS_RPLY_K_D
+    // @DisplayName: Replay GPS Kill Duration
+    // @Description: This is the duration in seconds that the replay system will kill the GPS position and velocity data.
+    // @User: Advanced
+    // @Units: s
+    AP_GROUPINFO("GPS_RPLY_K_D", 20, NavEKF3, _replay_gps_kill_duration, 0),
+
+    // @Param: ANELLO_X3_ID
+    // @DisplayName: Anello X3 Core Instance
+    // @Description: This parameter holds the instance number of the Anello X3 IMU.
+    // @User: Advanced
+    // @Units: N/A
+    AP_GROUPINFO("ANELLO_X3_ID", 21, NavEKF3, _anelloX3_core, 0),
+#endif // APM_BUILD_TYPE(APM_BUILD_Replay)
+
     AP_GROUPEND
 };
 
