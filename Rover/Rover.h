@@ -140,11 +140,6 @@ private:
     AP_Int8 *modes;
     const uint8_t num_modes = 6;
 
-#if AP_RPM_ENABLED
-    // AP_RPM Module
-    AP_RPM rpm_sensor;
-#endif
-
     // Arming/Disarming management class
     AP_Arming_Rover arming;
 
@@ -229,9 +224,6 @@ private:
 #if HAL_LOGGING_ENABLED
     static const LogStructure log_structure[];
 #endif
-
-    // time that rudder/steering arming has been running
-    uint32_t rudder_arm_timer;
 
     // latest wheel encoder values
     float wheel_encoder_last_distance_m[WHEELENCODER_MAX_INSTANCES];    // total distance recorded by wheel encoder (for reporting to GCS)
@@ -325,10 +317,11 @@ private:
 #if AP_ROVER_ADVANCED_FAILSAFE_ENABLED
     void afs_fs_check(void);
 #endif
-
+#if AP_FENCE_ENABLED
     // fence.cpp
+    void fence_checks_async() override;
     void fence_check();
-
+#endif
     // GCS_Mavlink.cpp
     void send_wheel_encoder_distance(mavlink_channel_t chan);
 
@@ -366,7 +359,6 @@ private:
     // radio.cpp
     void set_control_channels(void) override;
     void init_rc_in();
-    void rudder_arm_disarm_check();
     void read_radio();
     void radio_failsafe_check(uint16_t pwm);
 
@@ -415,7 +407,8 @@ private:
         Hold          = 2,
         SmartRTL      = 3,
         SmartRTL_Hold = 4,
-        Terminate     = 5
+        Terminate     = 5,
+        Loiter_Hold   = 6,
     };
 
     enum class Failsafe_Options : uint32_t {
@@ -449,6 +442,14 @@ public:
 
     // Simple mode
     float simple_sin_yaw;
+
+#if AP_ROVER_AUTO_ARM_ONCE_ENABLED
+    struct {
+        uint32_t last_arm_attempt_ms;
+        bool done;
+    } auto_arm_once;
+    void handle_auto_arm_once();
+#endif  // AP_ROVER_AUTO_ARM_ONCE_ENABLED
 };
 
 extern Rover rover;

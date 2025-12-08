@@ -54,9 +54,8 @@ const AP_Param::GroupInfo FlightAxis::var_info[] = {
   creation latency. These condition variables are used to synchronise
   the thread
  */
-static pthread_cond_t sockcond1 = PTHREAD_COND_INITIALIZER;
-static pthread_cond_t sockcond2 = PTHREAD_COND_INITIALIZER;
-static pthread_mutex_t sockmtx = PTHREAD_MUTEX_INITIALIZER;
+static HAL_BinarySemaphore sockcond1;
+static HAL_BinarySemaphore sockcond2;
 
 // the asprintf() calls are not worth checking for SITL
 #pragma GCC diagnostic ignored "-Wunused-result"
@@ -206,14 +205,13 @@ bool FlightAxis::soap_request_start(const char *action, const char *fmt, ...)
     vasprintf(&req1, fmt, ap);
     va_end(ap);
 
-    pthread_mutex_lock(&sockmtx);
-    while (socknext == nullptr) {
-        pthread_cond_wait(&sockcond1, &sockmtx);
+    while (sock == nullptr) {
+        sockcond1.wait_blocking();
+
+        sock = socknext;
+        socknext = nullptr;
+        sockcond2.signal();
     }
-    sock = socknext;
-    socknext = nullptr;
-    pthread_cond_broadcast(&sockcond2);
-    pthread_mutex_unlock(&sockmtx);
 
     char *req;
     asprintf(&req, R"(POST / HTTP/1.1
@@ -326,17 +324,28 @@ void FlightAxis::exchange_data(const struct sitl_input &input)
     }
 
     // maximum number of servos to send is 12 with new FlightAxis
-    float scaled_servos[12];
+    float scaled_servos[12] {};
+    uint16_t valid_channels = 0;
     for (uint8_t i=0; i<ARRAY_SIZE(scaled_servos); i++) {
+        if (input.servos[i] == 0) {
+            continue;
+        }
         scaled_servos[i] = (input.servos[i] - 1000) / 1000.0f;
+        valid_channels |= 1U << i;
     }
 
     if (option_is_set(Option::Rev4Servos)) {
-        // swap first 4 and last 4 servos, for quadplane testing
+        // swap first 4 and second 4 servos, for quadplane testing
         float saved[4];
         memcpy(saved, &scaled_servos[0], sizeof(saved));
         memcpy(&scaled_servos[0], &scaled_servos[4], sizeof(saved));
         memcpy(&scaled_servos[4], saved, sizeof(saved));
+        // and the validity flags:
+        uint16_t new_channels = 0;
+        new_channels |= (valid_channels & 0b1111111100000000);
+        new_channels |= (valid_channels & 0b11110000) >> 4;
+        new_channels |= (valid_channels & 0b00001111) << 4;
+        valid_channels = new_channels;
     }
 
     if (option_is_set(Option::HeliDemix)) {
@@ -354,7 +363,6 @@ void FlightAxis::exchange_data(const struct sitl_input &input)
         scaled_servos[2] = constrain_float(col, 0, 1);
     }
 
-    const uint16_t channels = hal.scheduler->is_system_initialized()?4095:0;
     if (!sock) {
         soap_request_start("ExchangeData", R"(<?xml version='1.0' encoding='UTF-8'?><soap:Envelope xmlns:soap='http://schemas.xmlsoap.org/soap/envelope/' xmlns:xsd='http://www.w3.org/2001/XMLSchema' xmlns:xsi='http://www.w3.org/2001/XMLSchema-instance'>
 <soap:Body>
@@ -379,7 +387,7 @@ void FlightAxis::exchange_data(const struct sitl_input &input)
 </ExchangeData>
 </soap:Body>
 </soap:Envelope>)",
-                           channels,
+                           valid_channels,
                            scaled_servos[0],
                            scaled_servos[1],
                            scaled_servos[2],
@@ -432,7 +440,6 @@ void FlightAxis::exchange_data(const struct sitl_input &input)
  */
 void FlightAxis::update(const struct sitl_input &input)
 {
-    last_input = input;
     exchange_data(input);
 
     double dt_seconds = state.m_currentPhysicsTime_SEC - last_time_s;
@@ -619,11 +626,11 @@ void FlightAxis::socket_creator(void)
 {
     socket_pid = getpid();
     while (true) {
-        pthread_mutex_lock(&sockmtx);
-        while (socknext != nullptr) {
-            pthread_cond_wait(&sockcond2, &sockmtx);
+        {
+            while (socknext != nullptr) {
+                sockcond2.wait_blocking();
+            }
         }
-        pthread_mutex_unlock(&sockmtx);
         auto *sck = NEW_NOTHROW SocketAPM_native(false);
         if (sck == nullptr) {
             usleep(500);
@@ -641,9 +648,7 @@ void FlightAxis::socket_creator(void)
         }
         sck->set_blocking(false);
         socknext = sck;
-        pthread_mutex_lock(&sockmtx);
-        pthread_cond_broadcast(&sockcond1);
-        pthread_mutex_unlock(&sockmtx);
+        sockcond1.signal();
     }
 }
 

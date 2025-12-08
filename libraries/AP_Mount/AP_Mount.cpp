@@ -12,13 +12,14 @@
 #include "AP_Mount_Alexmos.h"
 #include "AP_Mount_SToRM32.h"
 #include "AP_Mount_SToRM32_serial.h"
-#include "AP_Mount_Gremsy.h"
+#include "AP_Mount_MAVLink.h"
 #include "AP_Mount_Siyi.h"
 #include "AP_Mount_Scripting.h"
 #include "AP_Mount_Xacti.h"
 #include "AP_Mount_Viewpro.h"
 #include "AP_Mount_Topotek.h"
 #include "AP_Mount_CADDX.h"
+#include "AP_Mount_XFRobot.h"
 #include <stdio.h>
 #include <AP_Math/location.h>
 #include <SRV_Channel/SRV_Channel.h>
@@ -111,13 +112,13 @@ void AP_Mount::init()
             break;
 #endif
 
-#if HAL_MOUNT_GREMSY_ENABLED
-        // check for Gremsy mounts
-        case Type::Gremsy:
-            _backends[instance] = NEW_NOTHROW AP_Mount_Gremsy(*this, _params[instance], instance);
+#if HAL_MOUNT_MAVLINK_ENABLED
+        // check for MAVLink mounts
+        case Type::MAVLink:
+            _backends[instance] = NEW_NOTHROW AP_Mount_MAVLink(*this, _params[instance], instance);
             _num_instances++;
             break;
-#endif // HAL_MOUNT_GREMSY_ENABLED
+#endif // HAL_MOUNT_MAVLINK_ENABLED
 
 #if HAL_MOUNT_SERVO_ENABLED
         // check for BrushlessPWM mounts (uses Servo backend)
@@ -178,6 +179,15 @@ void AP_Mount::init()
             serial_instance++;
             break;
 #endif // HAL_MOUNT_CADDX_ENABLED
+
+#if HAL_MOUNT_XFROBOT_ENABLED
+        // check for XFRobot gimbal
+        case Type::XFRobot:
+            _backends[instance] = NEW_NOTHROW AP_Mount_XFRobot(*this, _params[instance], instance, serial_instance);
+            _num_instances++;
+            serial_instance++;
+            break;
+#endif // HAL_MOUNT_XFROBOT_ENABLED
         }
 
         // init new instance
@@ -291,6 +301,33 @@ void AP_Mount::set_yaw_lock(uint8_t instance, bool yaw_lock)
     // call backend's set_yaw_lock
     backend->set_yaw_lock(yaw_lock);
 }
+
+// set roll_lock used in RC_TARGETING mode.  If true, the gimbal's roll target is maintained in earth-frame
+// If false (aka "follow") the gimbal's roll is maintained in body-frame meaning it will rotate with the vehicle
+void AP_Mount::set_roll_lock(uint8_t instance, bool roll_lock)
+{
+    auto *backend = get_instance(instance);
+    if (backend == nullptr) {
+        return;
+    }
+
+    // call backend's set_roll_lock
+    backend->set_roll_lock(roll_lock);
+}
+
+// set pitch_lock used in RC_TARGETING mode.  If true, the gimbal's tilt target is maintained in earth-frame
+// If false (aka "follow") the gimbal's tilt is maintained in body-frame meaning it will tilt with the vehicle
+void AP_Mount::set_pitch_lock(uint8_t instance, bool pitch_lock)
+{
+    auto *backend = get_instance(instance);
+    if (backend == nullptr) {
+        return;
+    }
+
+    // call backend's set_pitch_lock
+    backend->set_pitch_lock(pitch_lock);
+}
+
 
 // set angle target in degrees
 // roll and pitch are in earth-frame
@@ -709,7 +746,8 @@ bool AP_Mount::get_angle_target(uint8_t instance, float& roll_deg, float& pitch_
     return backend->get_angle_target(roll_deg, pitch_deg, yaw_deg, yaw_is_earth_frame);
 }
 
-// accessors for scripting backends and logging
+#if AP_SCRIPTING_ENABLED
+// get mount target location. returns true on success
 bool AP_Mount::get_location_target(uint8_t instance, Location& target_loc)
 {
     auto *backend = get_instance(instance);
@@ -718,7 +756,9 @@ bool AP_Mount::get_location_target(uint8_t instance, Location& target_loc)
     }
     return backend->get_location_target(target_loc);
 }
+#endif
 
+// accessory for scripting backends and logging
 void AP_Mount::set_attitude_euler(uint8_t instance, float roll_deg, float pitch_deg, float yaw_bf_deg)
 {
     auto *backend = get_instance(instance);

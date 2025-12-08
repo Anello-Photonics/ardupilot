@@ -435,6 +435,15 @@ public:
             }
             return turns;
         }
+
+        /*
+          return the arc angle in radians for an ARC_WAYPOINT command
+          this has special handling for arc waypoints using cmd.p1 and loiter_ccw
+         */
+        float get_arc_angle_rad(void) const {
+            const float sign = (content.location.loiter_ccw == 0) ? 1.0f : -1.0f;
+            return radians(float(p1) * sign);
+        }
     };
 
 
@@ -733,9 +742,10 @@ public:
       disarm and mission logic should stop
      */
     enum class Option {
-        CLEAR_ON_BOOT            =  0,  // clear mission on vehicle boot
-        FAILSAFE_TO_BEST_LANDING =  1,  // on failsafe, find fastest path along mission home
-        CONTINUE_AFTER_LAND      =  2,  // continue running mission (do not disarm) after land if takeoff is next waypoint
+        CLEAR_ON_BOOT            = (1U<<0), // clear mission on vehicle boot
+        FAILSAFE_TO_BEST_LANDING = (1U<<1), // on failsafe, find fastest path along mission home
+        CONTINUE_AFTER_LAND      = (1U<<2), // continue running mission (do not disarm) after land if takeoff is next waypoint
+        DONT_ZERO_COUNTER        = (1U<<3), // don't zero counter on completion
     };
     bool option_is_set(Option option) const {
         return (_options.get() & (uint16_t)option) != 0;

@@ -69,12 +69,12 @@ public:
     // Write the last calculated NE position relative to the reference point (m)
     // If a calculated solution is not available, use the best available data and return false
     // If false returned, do not use for flight control
-    bool getPosNE(Vector2f &posNE) const;
+    bool getPosNE(Vector2p &posNE) const;
 
     // Write the last calculated D position relative to the reference point (m)
     // If a calculated solution is not available, use the best available data and return false
     // If false returned, do not use for flight control
-    bool getPosD(float &posD) const;
+    bool getPosD(postype_t &posD) const;
 
     // return NED velocity in m/s
     void getVelNED(Vector3f &vel) const;
@@ -263,6 +263,12 @@ public:
     */
     void writeExtNavVelData(const Vector3f &vel, float err, uint32_t timeStamp_ms, uint16_t delay_ms);
 
+    /*
+     * Write terrain altitude (derived from SRTM) in meters above the origin
+     * only used by optical flow when out of rangefinder range
+     */
+    void writeTerrainData(float alt_m);
+
     // Set to true if the terrain underneath is stable enough to be used as a height reference
     // in combination with a range finder. Set to false if the terrain underneath the vehicle
     // cannot be used as a height reference. Use to prevent range finder operation otherwise
@@ -327,6 +333,9 @@ public:
       using a different EKF lane
      */
     void checkLaneSwitch(void);
+
+    // switch to a new lane
+    void switchLane(uint8_t new_lane_index);
 
     /*
       Request a reset of the EKF yaw. This is called when the vehicle code is about to
@@ -454,7 +463,9 @@ private:
 
     // enum for processing options
     enum class Option {
-        JammingExpected     = (1<<0),
+        JammingExpected         = (1<<0),
+        ManualLaneSwitch        = (1<<1),
+        OptflowMayUseTerrainAlt = (1<<2),
     };
     bool option_is_enabled(Option option) const {
         return (_options & (uint32_t)option) != 0;

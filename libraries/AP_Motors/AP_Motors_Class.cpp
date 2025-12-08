@@ -48,11 +48,7 @@ AP_Motors::AP_Motors(uint16_t speed_hz) :
     _throttle_slew.reset();
 
     // init limit flags
-    limit.roll = true;
-    limit.pitch = true;
-    limit.yaw = true;
-    limit.throttle_lower = true;
-    limit.throttle_upper = true;
+    limit.set_all(true);
     _thrust_boost = false;
     _thrust_balanced = true;
 };
@@ -229,14 +225,6 @@ void AP_Motors::add_motor_num(int8_t motor_num)
     }
 }
 
-    // set limit flag for pitch, roll and yaw
-void AP_Motors::set_limit_flag_pitch_roll_yaw(bool flag)
-{
-    limit.roll = flag;
-    limit.pitch = flag;
-    limit.yaw = flag;
-}
-
 #if AP_SCRIPTING_ENABLED
 void AP_Motors::set_external_limits(bool roll, bool pitch, bool yaw, bool throttle_lower, bool throttle_upper)
 {
@@ -296,11 +284,15 @@ void AP_Motors::set_frame_string(const char * str) {
 // output_test_seq - spin a motor at the pwm value specified
 //  motor_seq is the motor's sequence number from 1 to the number of motors on the frame
 //  pwm value is an actual pwm value that will be output, normally in the range of 1000 ~ 2000
-void AP_Motors::output_test_seq(uint8_t motor_seq, int16_t pwm)
+//  return true if output was successful, false if not possible
+bool AP_Motors::output_test_seq(uint8_t motor_seq, int16_t pwm)
 {
     if (armed() && _interlock) {
         _output_test_seq(motor_seq, pwm);
+        return true;
     }
+    output_min();
+    return false;
 }
 
 bool AP_Motors::arming_checks(size_t buflen, char *buffer) const
@@ -319,6 +311,28 @@ bool AP_Motors::motor_test_checks(size_t buflen, char *buffer) const
     // Do not run frame specific arming checks as motor test is less strict
     // For example not all the outputs have to be assigned
     return AP_Motors::arming_checks(buflen, buffer);
+}
+
+// set all limits
+void AP_Motors::AP_Motors_limit::set_all(bool flag)
+{
+    set_rpy(flag);
+    set_throttle(flag);
+}
+
+// set limits for roll pitch yaw
+void AP_Motors::AP_Motors_limit::set_rpy(bool flag)
+{
+    roll = flag;
+    pitch = flag;
+    yaw = flag;
+}
+
+// set limits for throttle upper and lower
+void AP_Motors::AP_Motors_limit::set_throttle(bool flag)
+{
+    throttle_lower = flag;
+    throttle_upper = flag;
 }
 
 namespace AP {

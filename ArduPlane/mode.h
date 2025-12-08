@@ -9,7 +9,9 @@
 #include "quadplane.h"
 #include <AP_AHRS/AP_AHRS.h>
 #include <AP_Mission/AP_Mission.h>
+#include "config.h"
 #include "pullup.h"
+#include "systemid.h"
 
 #ifndef AP_QUICKTUNE_ENABLED
 #define AP_QUICKTUNE_ENABLED HAL_QUADPLANE_ENABLED
@@ -167,6 +169,17 @@ public:
     virtual bool supports_quicktune() const { return false; }
 #endif
 
+#if AP_PLANE_SYSTEMID_ENABLED
+    // does this mode support quadplane vtol systemid?
+    virtual bool supports_vtol_systemid() const { return false; }
+
+    // does this mode support plane or quadplane fixed wing systemid?
+    virtual bool supports_fw_systemid() const { return false; }
+
+    // Return true if fixed wing system ID should be allowed
+    bool allow_fw_systemid() const;
+#endif
+
 protected:
 
     // subclasses override this to perform checks before entering the mode
@@ -281,6 +294,11 @@ public:
     bool in_pullup() const { return pullup.in_pullup(); }
 #endif
 
+#if AP_PLANE_SYSTEMID_ENABLED
+    // does this mode support fixed wing systemid?
+    bool supports_fw_systemid() const override { return true; }
+#endif
+
 protected:
 
     bool _enter() override;
@@ -357,9 +375,19 @@ public:
     // handle a guided target request from GCS
     bool handle_guided_request(Location target_loc) override;
 
+#if AP_PLANE_OFFBOARD_GUIDED_SLEW_ENABLED
+    // handle a guided airspeed command, typically from companion computer
+    bool handle_change_airspeed(const float airspeed, const float acceleration);
+#endif // AP_PLANE_OFFBOARD_GUIDED_SLEW_ENABLED
+
     void set_radius_and_direction(const float radius, const bool direction_is_ccw);
 
     void update_target_altitude() override;
+
+#if AP_PLANE_SYSTEMID_ENABLED
+    // does this mode support fixed wing systemid?
+    bool supports_fw_systemid() const override { return true; }
+#endif
 
 protected:
 
@@ -387,6 +415,11 @@ public:
     bool does_auto_navigation() const override { return true; }
 
     bool does_auto_throttle() const override { return true; }
+
+#if AP_PLANE_SYSTEMID_ENABLED
+    // does this mode support fixed wing systemid?
+    bool supports_fw_systemid() const override { return true; }
+#endif
 
 protected:
 
@@ -421,6 +454,11 @@ public:
     void update_target_altitude() override;
     
     bool mode_allows_autotuning() const override { return true; }
+
+#if AP_PLANE_SYSTEMID_ENABLED
+    // does this mode support fixed wing systemid?
+    bool supports_fw_systemid() const override { return true; }
+#endif
 
 protected:
 
@@ -586,6 +624,11 @@ public:
 
     void run() override;
 
+#if AP_PLANE_SYSTEMID_ENABLED
+    // does this mode support fixed wing systemid?
+    bool supports_fw_systemid() const override { return true; }
+#endif
+
 #if MODE_AUTOLAND_ENABLED   
     // true if mode allows landing direction to be set on first takeoff after arm in this mode 
     bool allows_autoland_direction_capture() const override { return true; }
@@ -642,6 +685,11 @@ public:
 
     void update_target_altitude() override {};
 
+#if AP_PLANE_SYSTEMID_ENABLED
+    // does this mode support fixed wing systemid?
+    bool supports_fw_systemid() const override { return true; }
+#endif
+
 protected:
 
     bool _enter() override;
@@ -697,6 +745,11 @@ public:
 
     void run() override;
 
+#if AP_PLANE_SYSTEMID_ENABLED
+    // does this mode support quadplane vtol systemid?
+    bool supports_vtol_systemid() const override { return true; }
+#endif
+    
 protected:
 private:
 
@@ -721,6 +774,11 @@ public:
 
     void run() override;
 
+#if AP_PLANE_SYSTEMID_ENABLED
+    // does this mode support quadplane vtol systemid?
+    bool supports_vtol_systemid() const override { return true; }
+#endif
+    
 protected:
 
     bool _enter() override;
@@ -749,6 +807,11 @@ public:
 
     void run() override;
 
+#if AP_PLANE_SYSTEMID_ENABLED
+    // does this mode support quadplane vtol systemid?
+    bool supports_vtol_systemid() const override { return true; }
+#endif
+    
 protected:
 
     bool _enter() override;
@@ -931,6 +994,8 @@ public:
 
     bool does_auto_throttle() const override { return true; }
     
+    bool is_landing() const override;
+    
     void check_takeoff_direction(void);
 
     // return true when lined up correctly from the LOITER_TO_ALT
@@ -946,7 +1011,7 @@ public:
     AP_Int16 final_wp_dist;
     AP_Int16 landing_dir_off;
     AP_Int8  options;
-    AP_Int16 climb_min;
+    AP_Int16 terrain_alt_min;
 
     // Bitfields of AUTOLAND_OPTIONS
     enum class AutoLandOption {
@@ -968,7 +1033,6 @@ protected:
     AP_Mission::Mission_Command cmd_climb;
     AP_Mission::Mission_Command cmd_loiter;
     AP_Mission::Mission_Command cmd_land;
-    uint32_t entry_alt;
     Location land_start;
     AutoLandStage stage;
     void set_autoland_direction(const float heading);

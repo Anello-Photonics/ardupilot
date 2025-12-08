@@ -88,15 +88,6 @@ public:
     // if we have an estimate from a specific sensor index
     bool airspeed_EAS(uint8_t airspeed_index, float &airspeed_ret) const override;
 
-    // return a synthetic EAS estimate (one derived from sensors
-    // other than an actual airspeed sensor), if available. return
-    // true if we have a synthetic airspeed.  ret will not be modified
-    // on failure.
-    bool synthetic_airspeed_EAS(float &ret) const WARN_IF_UNUSED {
-        ret = _last_airspeed_TAS;
-        return true;
-    }
-
     // return a ground vector estimate in meters/second, in North/East order
     Vector2f groundspeed_vector() override;
 
@@ -122,9 +113,9 @@ public:
 
     // relative-origin functions for fallback in AP_InertialNav
     bool get_origin(Location &ret) const override;
-    bool get_relative_position_NED_origin(Vector3f &vec) const override;
-    bool get_relative_position_NE_origin(Vector2f &posNE) const override;
-    bool get_relative_position_D_origin(float &posD) const override;
+    bool get_relative_position_NED_origin(Vector3p &vec) const override;
+    bool get_relative_position_NE_origin(Vector2p &posNE) const override;
+    bool get_relative_position_D_origin(postype_t &posD) const override;
 
     void send_ekf_status_report(class GCS_MAVLINK &link) const override;
 

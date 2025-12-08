@@ -71,6 +71,7 @@
 #include <AP_KDECAN/AP_KDECAN.h>
 #include <Filter/AP_Filter.h>
 #include <AP_Stats/AP_Stats.h>              // statistics library
+#include <AP_DDS/AP_DDS_config.h>
 #if AP_SCRIPTING_ENABLED
 #include <AP_Scripting/AP_Scripting.h>
 #endif
@@ -78,6 +79,11 @@
 #include <AP_Gripper/AP_Gripper_config.h>
 #if AP_GRIPPER_ENABLED
 #include <AP_Gripper/AP_Gripper.h>
+#endif
+
+#include <AP_RPM/AP_RPM_config.h>
+#if AP_RPM_ENABLED
+#include <AP_RPM/AP_RPM.h>
 #endif
 
 #include <AP_IBus_Telem/AP_IBus_Telem.h>
@@ -173,7 +179,7 @@ public:
 
 #if AP_SCRIPTING_ENABLED || AP_EXTERNAL_CONTROL_ENABLED
     // Method to takeoff for use by external control
-    virtual bool start_takeoff(const float alt) { return false; }
+    virtual bool start_takeoff(const float alt_m) { return false; }
     // Method to control vehicle position for use by external control
     virtual bool set_target_location(const Location& target_loc) { return false; }
     // Get target location for use by external control
@@ -183,7 +189,7 @@ public:
     /*
       methods to control vehicle for use by scripting
     */
-    virtual bool set_target_pos_NED(const Vector3f& target_pos, bool use_yaw, float yaw_deg, bool use_yaw_rate, float yaw_rate_degs, bool yaw_relative, bool terrain_alt) { return false; }
+    virtual bool set_target_pos_NED(const Vector3f& target_pos, bool use_yaw, float yaw_deg, bool use_yaw_rate, float yaw_rate_degs, bool yaw_relative, bool is_terrain_alt) { return false; }
     virtual bool set_target_posvel_NED(const Vector3f& target_pos, const Vector3f& target_vel) { return false; }
     virtual bool set_target_posvelaccel_NED(const Vector3f& target_pos, const Vector3f& target_vel, const Vector3f& target_accel, bool use_yaw, float yaw_deg, bool use_yaw_rate, float yaw_rate_degs, bool yaw_relative) { return false; }
     virtual bool set_target_velocity_NED(const Vector3f& vel_ned) { return false; }
@@ -428,7 +434,7 @@ protected:
     AP_Generator generator;
 #endif
 
-#if HAL_EXTERNAL_AHRS_ENABLED
+#if AP_EXTERNAL_AHRS_ENABLED
     AP_ExternalAHRS externalAHRS;
 #endif
 
@@ -473,6 +479,14 @@ protected:
 
 #if AP_FENCE_ENABLED
     AC_Fence fence;
+    struct {
+        bool have_updates;      // true if new breache statuses have been captured but not actioned
+        uint8_t new_breaches;   // the new breaches that are available
+        uint32_t last_check_ms; // last time the fence check was run
+    } fence_breaches;
+
+    void fence_init();
+    virtual void fence_checks_async() {};
 #endif
 
 #if AP_TEMPERATURE_SENSOR_ENABLED
@@ -481,6 +495,10 @@ protected:
 
 #if AP_SCRIPTING_ENABLED
     AP_Scripting scripting;
+#endif
+
+#if AP_RPM_ENABLED
+    AP_RPM rpm_sensor;
 #endif
 
     static const struct AP_Param::GroupInfo var_info[];
@@ -502,6 +520,17 @@ protected:
 
     // check for motor noise at a particular frequency
     void check_motor_noise();
+
+#if HAL_WITH_ESC_TELEM
+    // code common to multiple vehicles which ensures ESC telemetry is
+    // reporting that all motors are performing.
+    bool motors_takeoff_check(float rpm_min, float rpm_max);
+    // state for takeoff_check:
+    struct {
+        uint32_t warning_ms;
+    } takeoff_check_state;
+
+#endif
 
     ModeReason control_mode_reason = ModeReason::UNKNOWN;
 

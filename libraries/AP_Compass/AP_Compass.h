@@ -23,16 +23,8 @@
 #define AP_COMPASS_MOT_COMP_CURRENT     0x02
 #define AP_COMPASS_MOT_COMP_PER_MOTOR   0x03
 
-// setup default mag orientation for some board types
 #ifndef MAG_BOARD_ORIENTATION
-#if CONFIG_HAL_BOARD == HAL_BOARD_LINUX && CONFIG_HAL_BOARD_SUBTYPE == HAL_BOARD_SUBTYPE_LINUX_BEBOP
-# define MAG_BOARD_ORIENTATION ROTATION_YAW_90
-#elif CONFIG_HAL_BOARD == HAL_BOARD_LINUX && (CONFIG_HAL_BOARD_SUBTYPE == HAL_BOARD_SUBTYPE_LINUX_ERLEBRAIN2 || \
-      CONFIG_HAL_BOARD_SUBTYPE == HAL_BOARD_SUBTYPE_LINUX_PXFMINI)
-# define MAG_BOARD_ORIENTATION ROTATION_YAW_270
-#else
-# define MAG_BOARD_ORIENTATION ROTATION_NONE
-#endif
+#define MAG_BOARD_ORIENTATION ROTATION_NONE
 #endif
 
 #ifndef COMPASS_MOT_ENABLED
@@ -80,6 +72,7 @@ class CompassLearn;
 class Compass
 {
 friend class AP_Compass_Backend;
+friend class AP_Compass_DroneCAN;
 public:
     Compass();
 
@@ -98,7 +91,7 @@ public:
     /// @returns    True if the compass was initialized OK, false if it was not
     ///             found or is not functioning.
     ///
-    void init();
+    __INITFUNC__ void init();
 
     /// Read the compass and update the mag_ variables.
     ///
@@ -384,13 +377,12 @@ private:
     /// @param  dev_id                   Dev ID of compass to register against
     ///
     /// @return instance number saved against the dev id or first available empty instance number
-    bool register_compass(int32_t dev_id, uint8_t& instance);
+    bool register_compass(int32_t dev_id, uint8_t& instance) WARN_IF_UNUSED;
 
     // load backend drivers
-    bool _add_backend(AP_Compass_Backend *backend);
-    void _probe_external_i2c_compasses(void);
-    void _detect_backends(void);
-    void probe_i2c_spi_compasses(void);
+    __INITFUNC__ void _probe_external_i2c_compasses(void);
+    __INITFUNC__ void _detect_backends(void);
+    __INITFUNC__ void probe_i2c_spi_compasses(void);
 #if AP_COMPASS_DRONECAN_ENABLED
     void probe_dronecan_compasses(void);
 #endif
@@ -502,10 +494,15 @@ private:
 #if AP_COMPASS_IIS2MDC_ENABLED
         DRIVER_IIS2MDC  =22,
 #endif
+#if AP_COMPASS_LIS2MDL_ENABLED
+        DRIVER_LIS2MDL  =23,
+#endif
+
 };
 
     bool _driver_enabled(enum DriverType driver_type);
-    
+    void add_backend(DriverType driver_type, AP_Compass_Backend *backend);
+
     // backend objects
     AP_Compass_Backend *_backends[COMPASS_MAX_BACKEND];
     uint8_t     _backend_count;

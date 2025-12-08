@@ -41,7 +41,7 @@ static SDCConfig sdcconfig = {
 };
 #elif HAL_USE_MMC_SPI
 MMCDriver MMCD1;
-static AP_HAL::OwnPtr<AP_HAL::SPIDevice> device;
+static AP_HAL::SPIDevice *device;
 static MMCConfig mmcconfig;
 static SPIConfig lowspeed;
 static SPIConfig highspeed;
@@ -71,13 +71,31 @@ bool sdcard_init()
 #endif
 
     if (sdcd.bouncebuffer == nullptr) {
-        // allocate 4k bouncebuffer for microSD to match size in
+        // allocate 4k-32k bouncebuffer for microSD to match size in
         // AP_Logger
 #if defined(STM32H7)
-        bouncebuffer_init(&sdcd.bouncebuffer, 4096, true);
-#else
-        bouncebuffer_init(&sdcd.bouncebuffer, 4096, false);
+        bouncebuffer_init(&sdcd.bouncebuffer, AP_FATFS_MAX_IO_SIZE, true);
+        // allocation failure, pick a smaller size
+        if (sdcd.bouncebuffer->dma_buf == nullptr) {
+            bouncebuffer_init(&sdcd.bouncebuffer, AP_FATFS_MIN_IO_SIZE, true);
+#if AP_FILESYSTEM_FATFS_ENABLED
+            AP_Filesystem_FATFS::set_io_size(AP_FATFS_MIN_IO_SIZE);
 #endif
+        } else {
+#if AP_FILESYSTEM_FATFS_ENABLED
+            AP_Filesystem_FATFS::set_io_size(AP_FATFS_MAX_IO_SIZE);
+#endif
+        }
+#else
+        bouncebuffer_init(&sdcd.bouncebuffer, AP_FATFS_MAX_IO_SIZE, false);
+#if AP_FILESYSTEM_FATFS_ENABLED
+        AP_Filesystem_FATFS::set_io_size(AP_FATFS_MAX_IO_SIZE);
+#endif
+#endif
+        if (sdcd.bouncebuffer->dma_buf == nullptr) {    // we are never going to be able to log
+            sdcard_running = false;
+            return false;
+        }
     }
 
     if (sdcard_running) {
@@ -114,18 +132,19 @@ bool sdcard_init()
 
     sdcard_running = true;
 
-    device = AP_HAL::get_HAL().spi->get_device("sdcard");
-    if (!device) {
-        printf("No sdcard SPI device found\n");
-        sdcard_running = false;
-        return false;
+    if (device == nullptr) {
+        device = AP_HAL::get_HAL().spi->get_device_ptr("sdcard");
+        if (!device) {
+            printf("No sdcard SPI device found\n");
+            sdcard_running = false;
+            return false;
+        }
     }
     device->set_slowdown(sd_slowdown);
 
     mmcObjectInit(&MMCD1, MMCD1.buffer);
 
-    mmcconfig.spip =
-            static_cast<ChibiOS::SPIDevice*>(device.get())->get_driver();
+    mmcconfig.spip = (static_cast<ChibiOS::SPIDevice*>(device))->get_driver();
     mmcconfig.hscfg = &highspeed;
     mmcconfig.lscfg = &lowspeed;
 
@@ -220,7 +239,7 @@ void spiStopHook(SPIDriver *spip)
 __RAMFUNC__ void spiAcquireBusHook(SPIDriver *spip)
 {
     if (sdcard_running) {
-        ChibiOS::SPIDevice *devptr = static_cast<ChibiOS::SPIDevice*>(device.get());
+        ChibiOS::SPIDevice *devptr = static_cast<ChibiOS::SPIDevice*>(device);
         devptr->acquire_bus(true, true);
     }
 }
@@ -228,7 +247,7 @@ __RAMFUNC__ void spiAcquireBusHook(SPIDriver *spip)
 __RAMFUNC__ void spiReleaseBusHook(SPIDriver *spip)
 {
     if (sdcard_running) {
-        ChibiOS::SPIDevice *devptr = static_cast<ChibiOS::SPIDevice*>(device.get());
+        ChibiOS::SPIDevice *devptr = static_cast<ChibiOS::SPIDevice*>(device);
         devptr->acquire_bus(false, true);
     }
 }
