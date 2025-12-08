@@ -14,7 +14,7 @@
     driver for Anello X3 IMU system
  */
 
-#define ALLOW_DOUBLE_MATH_FUNCTIONS
+#define AP_MATH_ALLOW_DOUBLE_FUNCTIONS 1
 
 #include "AP_ExternalAHRS_config.h"
 
