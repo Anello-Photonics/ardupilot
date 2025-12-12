@@ -140,6 +140,21 @@ enum param_key : uint8_t {
     FORCE_EKF3,
 };
 
+static bool ensure_dir_exists(const char* path)
+{
+    struct stat st{};
+    if (stat(path, &st) == 0 && S_ISDIR(st.st_mode)) {
+        return true;
+    }
+    if (mkdir(path, 0755) == 0) {
+        return true;
+    }
+    if (errno == EEXIST) {
+        return true;
+    }
+    return false;
+}
+
 void Replay::_parse_command_line(uint8_t argc, char * const argv[])
 {
     const struct GetOptLong::option options[] = {
@@ -154,6 +169,10 @@ void Replay::_parse_command_line(uint8_t argc, char * const argv[])
     };
 
     // Open output file to save parameters
+    if (!ensure_dir_exists("logs")) {
+        fprintf(stderr, "Failed to create logs directory\n");
+        exit(1);
+    }
     FILE *parm_output_file = fopen("logs/LASTLOG_PARAMS.TXT", "w");
     if (parm_output_file == nullptr) {
         ::fprintf(stderr, "Failed to open logs/LASTLOG_PARAMS.TXT for writing\n");
