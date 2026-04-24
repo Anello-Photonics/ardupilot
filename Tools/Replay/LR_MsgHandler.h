@@ -6,6 +6,25 @@
 #include <AP_NavEKF2/AP_NavEKF2.h>
 #include <AP_NavEKF3/AP_NavEKF3.h>
 
+struct RGPJEntry {
+    double timestamp;
+    double yaw;
+    double yaw_accuracy;
+    uint32_t yaw_deg_time_ms;
+};
+
+struct RASIEntry {
+    double timestamp;
+    float airspeed;
+    uint32_t last_update_ms;
+};
+
+struct RFRNEntry {
+    double timestamp;
+    float E2T;
+    uint32_t last_update_ms;
+};
+
 class LR_MsgHandler : public MsgHandler {
 public:
     LR_MsgHandler(struct log_Format &f);
@@ -200,6 +219,10 @@ class LR_MsgHandler_RGPJ : public LR_MsgHandler
 public:
     using LR_MsgHandler::LR_MsgHandler;
     void process_message(uint8_t *msg) override;
+private:
+    std::vector<RGPJEntry> _rgpj_data;
+    std::vector<RASIEntry> _rasi_data;
+    std::vector<RFRNEntry> _rfrn_data;
 };
 
 class LR_MsgHandler_RMGH : public LR_MsgHandler
