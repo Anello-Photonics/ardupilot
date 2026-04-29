@@ -164,12 +164,12 @@ void Replay::_parse_command_line(uint8_t argc, char * const argv[])
 
     // Open output file to save parameters
     if (!ensure_dir_exists("logs")) {
-        fprintf(stderr, "Failed to create logs directory\n");
+        ::printf("Failed to create logs directory\n");
         exit(1);
     }
-    FILE *parm_output_file = fopen("logs/LASTLOG_PARAMS.TXT", "w");
+    APFS_FILE *parm_output_file = apfs_fopen("logs/LASTLOG_PARAMS.TXT", "w");
     if (parm_output_file == nullptr) {
-        ::fprintf(stderr, "Failed to open logs/LASTLOG_PARAMS.TXT for writing\n");
+        ::printf("Failed to open logs/LASTLOG_PARAMS.TXT for writing\n");
         exit(1);
     }
 
@@ -182,7 +182,7 @@ void Replay::_parse_command_line(uint8_t argc, char * const argv[])
             const char *eq = strchr(gopt.optarg, '=');
             if (eq == NULL) {
                 ::printf("Usage: -p NAME=VALUE\n");
-                fclose(parm_output_file);
+                apfs_fclose(parm_output_file);
                 exit(1);
             }
             struct user_parameter *u = NEW_NOTHROW user_parameter;
@@ -192,7 +192,9 @@ void Replay::_parse_command_line(uint8_t argc, char * const argv[])
             u->next = user_parameters;
             user_parameters = u;
             // Write parameter to file
-            ::fprintf(parm_output_file, "%s=%.8f\n", u->name, u->value);
+            char buf[256];
+            snprintf(buf, sizeof(buf), "%s=%.8f\n", u->name, u->value);
+            apfs_fprintf(parm_output_file, buf, strlen(buf));
             break;
         }
 
@@ -215,11 +217,11 @@ void Replay::_parse_command_line(uint8_t argc, char * const argv[])
         case 'h':
         default:
             usage();
-            fclose(parm_output_file);
+            apfs_fclose(parm_output_file);
             exit(0);
         }
     }
-    fclose(parm_output_file);
+    apfs_fclose(parm_output_file);
 
     argv += gopt.optind;
     argc -= gopt.optind;
