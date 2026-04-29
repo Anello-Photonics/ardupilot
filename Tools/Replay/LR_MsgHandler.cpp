@@ -7,6 +7,7 @@
 #include <cinttypes>
 
 extern const AP_HAL::HAL& hal;
+std::vector<RASIEntry> _rasi_data;
 
 #define MSG_CREATE(sname,msgbytes) log_ ##sname msg; memcpy((void*)&msg, (msgbytes)+3, sizeof(msg));
 
@@ -44,6 +45,12 @@ void LR_MsgHandler_RFRF::process_message(uint8_t *msgbytes)
 void LR_MsgHandler_RFRN::process_message(uint8_t *msgbytes)
 {
     MSG_CREATE(RFRN, msgbytes);
+    msg.EAS2TAS = (float)1.0f; // for now we just set EAS=TAS, but we could add some drag model if we wanted to be fancy
+    msg.available_memory = (uint32_t)316688;
+    msg.ahrs_airspeed_sensor_enabled = (uint8_t)1;
+    msg.vehicle_class = uint8_t(AP_DAL::VehicleClass::FIXED_WING);
+    msg.fly_forward = (uint8_t)1;
+    msg.armed = (uint8_t)1;
     AP::dal().handle_message(msg);
 }
 
@@ -185,11 +192,30 @@ void LR_MsgHandler_RISI::process_message(uint8_t *msgbytes)
 void LR_MsgHandler_RASH::process_message(uint8_t *msgbytes)
 {
     MSG_CREATE(RASH, msgbytes);
+    msg.num_sensors = 1;
+    msg.primary = 0;
     AP::dal().handle_message(msg);
 }
 void LR_MsgHandler_RASI::process_message(uint8_t *msgbytes)
 {
     MSG_CREATE(RASI, msgbytes);
+    // overwrite airspeed with rasi_data based on nearest timestamp match
+    if (!_rasi_data.empty()) {
+        RASIEntry closest_entry;
+        double msg_time = msg.last_update_ms;
+        double min_time_diff = std::numeric_limits<double>::max();
+        for (const auto& entry : _rasi_data) {
+            double time_diff = std::abs(entry.last_update_ms - msg_time);
+            if (time_diff < min_time_diff) {
+                min_time_diff = time_diff;
+                closest_entry = entry;
+            }
+        }
+        msg.airspeed = (float)closest_entry.airspeed;
+        msg.healthy = (bool)1;
+        msg.use = (bool)1;
+        msg.instance = (uint8_t)0;
+    }
     AP::dal().handle_message(msg);
 }
 
@@ -232,6 +258,17 @@ void LR_MsgHandler_RGPI::process_message(uint8_t *msgbytes)
 void LR_MsgHandler_RGPJ::process_message(uint8_t *msgbytes)
 {
     MSG_CREATE(RGPJ, msgbytes);
+    if (msg.last_message_time_ms > 0) {
+        // add timestamped airspeed entry to _rasi_data
+        RASIEntry entry;
+        entry.timestamp = msg.last_message_time_ms / 1000.0; // convert ms to seconds
+        entry.airspeed = sqrtf(msg.velocity.x*msg.velocity.x + msg.velocity.y*msg.velocity.y);
+        // add some uniform noise to the airspeed to make it more realistic
+        entry.airspeed += ((float)rand() / (float)RAND_MAX) - 0.5f; // add noise in the range of [-0.5,0.5] m/s
+        entry.airspeed = MAX(entry.airspeed, 0.0f); // prevent negative airspeed
+        entry.last_update_ms = msg.last_message_time_ms;
+        _rasi_data.push_back(entry);
+    }
     AP::dal().handle_message(msg);
 }
 

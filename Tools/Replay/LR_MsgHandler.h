@@ -5,6 +5,15 @@
 #include <AP_GPS/AP_GPS.h>
 #include <AP_NavEKF2/AP_NavEKF2.h>
 #include <AP_NavEKF3/AP_NavEKF3.h>
+#include <vector>
+
+
+struct RASIEntry {
+    double timestamp;
+    float airspeed;
+    uint32_t last_update_ms;
+};
+extern std::vector<RASIEntry> _rasi_data;
 
 class LR_MsgHandler : public MsgHandler {
 public:

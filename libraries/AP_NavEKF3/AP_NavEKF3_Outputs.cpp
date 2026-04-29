@@ -257,7 +257,7 @@ float NavEKF3_core::getPosDownDerivative(void) const
 bool NavEKF3_core::getPosNE(Vector2p &posNE) const
 {
     // There are three modes of operation, absolute position (GPS fusion), relative position (optical flow fusion) and constant position (no position estimate available)
-    if (PV_AidingMode != AID_NONE) {
+    if (1) {
         // This is the normal mode of operation where we can use the EKF position states
         // correct for the IMU offset (EKF calculations are at the IMU)
         posNE = outputDataNew.position.xy().topostype() + posOffsetNED.xy().topostype() + public_origin.get_distance_NE_postype(EKF_origin);
