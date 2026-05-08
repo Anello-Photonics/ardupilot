@@ -52,7 +52,7 @@ void LR_MsgHandler_RFRF::process_message(uint8_t *msgbytes)
 void LR_MsgHandler_RFRN::process_message(uint8_t *msgbytes)
 {
     MSG_CREATE(RFRN, msgbytes);
-    AP::dal().handle_message(msg);
+    // AP::dal().handle_message(msg);
 }
 
 void LR_MsgHandler_REV2::process_message(uint8_t *msgbytes)
@@ -193,12 +193,12 @@ void LR_MsgHandler_RISI::process_message(uint8_t *msgbytes)
 void LR_MsgHandler_RASH::process_message(uint8_t *msgbytes)
 {
     MSG_CREATE(RASH, msgbytes);
-    AP::dal().handle_message(msg);
+    // AP::dal().handle_message(msg);
 }
 void LR_MsgHandler_RASI::process_message(uint8_t *msgbytes)
 {
     MSG_CREATE(RASI, msgbytes);
-    AP::dal().handle_message(msg);
+    // AP::dal().handle_message(msg);
 }
 
 void LR_MsgHandler_RBRH::process_message(uint8_t *msgbytes)
@@ -377,6 +377,9 @@ void LR_MsgHandler_RGPJ::process_message(uint8_t *msgbytes)
         log_RASI rasi;
         memcpy(&rasi, msgbytes+3, sizeof(rasi));
 
+        log_RASH rash;
+        memcpy(&rash, msgbytes+3, sizeof(rash));
+
         log_RFRN rfrn;
         memcpy(&rfrn, msgbytes+3, sizeof(rfrn));
 
@@ -407,9 +410,12 @@ void LR_MsgHandler_RGPJ::process_message(uint8_t *msgbytes)
             rasi.healthy = 1;
             rasi.use = 1;
             rasi.instance = 0;
+
+            rash.num_sensors = 1;
+            rash.primary = 0;
         }
         AP::dal().handle_message(rasi);
-
+        AP::dal().handle_message(rash);
 
 
         // find msg for E2T
