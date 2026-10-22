@@ -234,7 +234,7 @@ void AP_InertialSensor_AnelloX3::convert_imu_data(const AnelloX3_BinaryPayload &
     imu_data.fusion_status = bin_payload.fusion_status;
 
     // --- timing + data-loss detection from the sensor's own monotonic clock ---
-    imu_data.mcu_time_us = bin_payload.mcu_time * 0.001; // ns -> us
+    imu_data.mcu_time_us = bin_payload.mcu_time / 1000ULL; // ns -> us
     if (last_mcu_time_us != 0) {
         const uint32_t nominal_us = 1000000UL / RATE_HZ;
         const int64_t gap_us = int64_t(imu_data.mcu_time_us - last_mcu_time_us);
